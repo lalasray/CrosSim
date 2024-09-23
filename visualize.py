@@ -28,7 +28,8 @@ def euler_to_vector(euler_angles):
 # Extract data arrays
 positions = data['positions']
 orientations = data['orientations']
-linear_acceleration = data['linear_acceleration']
+#linear_acceleration = data['linear_acceleration']
+linear_acceleration = data['linear_acceleration_with_gravity']
 angular_velocity = data['angular_velocity']
 
 # Visualization
