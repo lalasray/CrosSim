@@ -2,7 +2,7 @@ import os
 import numpy as np
 
 # Directory path
-base_dir = "motion_IMU" 
+base_dir = "test\aist" 
 
 largest_file = None
 largest_size = 0

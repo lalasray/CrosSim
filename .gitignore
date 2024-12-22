@@ -2,3 +2,7 @@
 /__pycache__
 /motion_IMU
 /semantic_labels
+/Model/__pycache__
+/sample
+/test
+/test_label

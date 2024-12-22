@@ -13,9 +13,9 @@ body_parts = [
     'chest', 'Necklace', 'belt', 'left_ear', 'right_ear'
 ]
 # Define the path to the saved .npz file
-body_part = "right_wrist"  # Replace with the actual body part name
-save_dir = "motion_IMU/aist/subset_0000/Dance_Break"  # Replace with the actual save directory path
-file_path = os.path.join(save_dir, f'{body_part}_v3.npz')
+body_part = "left_wrist"  # Replace with the actual body part name
+save_dir = r"sample"  # Replace with the actual save directory path
+file_path = os.path.join(save_dir, f'{body_part}_1.npz')
 
 # Load the data from the .npz file
 data = np.load(file_path)
@@ -28,8 +28,7 @@ def euler_to_vector(euler_angles):
 # Extract data arrays
 positions = data['positions']
 orientations = data['orientations']
-#linear_acceleration = data['linear_acceleration']
-linear_acceleration = data['linear_acceleration_with_gravity']
+linear_acceleration = data['linear_acceleration']
 angular_velocity = data['angular_velocity']
 
 # Visualization
