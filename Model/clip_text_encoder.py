@@ -25,15 +25,15 @@ class TextEncoder:
 
     def encode_text(self, text_data):
         """
-        Encode the input text using the CLIP model.
+        Encode the input batch of text using the CLIP model.
         
         Args:
-            text_data (str): The input text description to be encoded.
+            text_data (list of str): The input batch of text descriptions to be encoded.
         
         Returns:
-            torch.Tensor: The embedding vector for the input text.
+            torch.Tensor: The batch of embedding vectors for the input text.
         """
-        # Process the text data
+        # Process the batch of text data
         inputs = self.clip_processor(text=text_data, return_tensors="pt", padding=True, truncation=True)
         
         # Move inputs to the same device as the model
@@ -43,33 +43,35 @@ class TextEncoder:
         with torch.no_grad():
             clip_embeddings = self.clip_model.get_text_features(**inputs)
         
-        return clip_embeddings.squeeze(0)  # Remove batch dimension
+        return clip_embeddings  # No need to squeeze, as it's already batch_size, 512
 
-def generate_random_text(length=10):
+def generate_random_text(batch_size=32, length=20):
     """
-    Generate a random string of specified length.
+    Generate a batch of random strings of specified length.
     
     Args:
-        length (int): The length of the random string.
+        batch_size (int): The number of random strings to generate.
+        length (int): The length of each random string.
         
     Returns:
-        str: A random string.
+        list of str: A list of random strings.
     """
     letters = string.ascii_letters + string.digits
-    return ''.join(random.choice(letters) for i in range(length))
+    return [''.join(random.choice(letters) for i in range(length)) for _ in range(batch_size)]
 
 def main():
     # Initialize the text encoder with the CLIP model
     text_encoder = TextEncoder()
 
-    # Generate a random text description
-    random_text = generate_random_text(length=20)  # Random string of 20 characters
-    print(f"Random Text: {random_text}")
+    # Generate a random batch of text descriptions
+    batch_size = 32
+    random_text_batch = generate_random_text(batch_size=batch_size, length=20)  # 32 random strings of 20 characters
+    print(f"Random Text Batch: {random_text_batch[:3]}...")  # Print a sample of the batch
 
-    # Encode the text and print the resulting embedding
-    text_embedding = text_encoder.encode_text(random_text)
+    # Encode the batch of text and print the resulting embeddings
+    text_embeddings = text_encoder.encode_text(random_text_batch)
     
-    print(f"Text embedding shape: {text_embedding.shape}")
+    print(f"Text embeddings shape: {text_embeddings.shape}")
 
 if __name__ == "__main__":
     main()
