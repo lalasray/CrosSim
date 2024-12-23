@@ -1,12 +1,12 @@
 import torch
 from torch.utils.data import DataLoader
-from random_dataloader import RandomCrosSimDataset, collate_fn
-from class_encoder import ClassEncoder
-from clip_text_encoder import TextEncoder
-from graph_IMU_encoder import IMUGraphEncoderTemporal
-from graph_pose_encoder import PoseGraphEncoderTemporal
-from gtr_text_encoder import EmbeddingEncoder
-from Single_IMU_with_pos_encoder import IMUSingleNodeEncoderWithClass
+from Model.random_dataloader import RandomCrosSimDataset, collate_fn
+from Model.Encoder.class_encoder import ClassEncoder
+from Model.Encoder.clip_text_encoder import TextEncoder
+from Model.Encoder.graph_IMU_encoder import IMUGraphEncoderTemporal
+from Model.Encoder.graph_pose_encoder import PoseGraphEncoderTemporal
+from Model.Encoder.gtr_text_encoder import EmbeddingEncoder
+from Model.Encoder.Single_IMU_with_pos_encoder import IMUSingleNodeEncoderWithClass
 
 # Example usage
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
