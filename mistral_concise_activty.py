@@ -61,7 +61,7 @@ def process_directory(directory_path: str, csv_file_path: str):
                     process_file(file_path, csv_writer)
 
 # Example usage
-directory_path = r"/home/lala/Documents/GitHub/CrosSim/Data/test/text/"  # Replace with your directory path
-csv_file_path = r"/home/lala/Documents/GitHub/CrosSim/Data/test/predicted_activities.csv"  # Replace with your desired CSV file path
+directory_path = r"/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/aist"  # Replace with your directory path
+csv_file_path = r"/media/lala/Crucial X62/CrosSim/Data/MotionX/hard_labels/aist.csv"  # Replace with your desired CSV file path
 process_directory(directory_path, csv_file_path)
 
