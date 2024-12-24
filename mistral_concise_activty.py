@@ -60,8 +60,35 @@ def process_directory(directory_path: str, csv_file_path: str):
                     file_path = os.path.join(root, file)
                     process_file(file_path, csv_writer)
 
+def process_multiple_directories(directory_list: list, output_base_path: str):
+    for directory in directory_list:
+        # Generate a CSV file name based on the directory name
+        directory_name = os.path.basename(os.path.normpath(directory))
+        csv_file_path = os.path.join(output_base_path, f"{directory_name}.csv")
+        
+        print(f"Processing directory: {directory}")
+        print(f"Output CSV: {csv_file_path}\n")
+        
+        # Process the directory and save results to the corresponding CSV file
+        process_directory(directory, csv_file_path)
+
 # Example usage
-directory_path = r"/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/aist"  # Replace with your directory path
-csv_file_path = r"/media/lala/Crucial X62/CrosSim/Data/MotionX/hard_labels/aist.csv"  # Replace with your desired CSV file path
-process_directory(directory_path, csv_file_path)
+directories = [
+    "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/aist",
+    "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/animation",
+    "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/dance",
+    "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/EgoBody",
+    "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/fitness",
+    "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/game_motion",
+    "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/HAA500",
+    "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/humman",
+    "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/idea400",
+    "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/kungfu",
+    "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/music",
+    "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/perform",
+    "/media/lala/Crucial X62/CrosSim/Data/UniMocap/texts",
+]
+output_base_path = "/media/lala/Crucial X62/CrosSim/Data/MotionX/hard_labels"
+
+process_multiple_directories(directories, output_base_path)
 
