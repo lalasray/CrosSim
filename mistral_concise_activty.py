@@ -12,7 +12,7 @@ def infer_activity(file_name: str, sentence: str) -> str:
     prompt = (
         f"File name: {file_name}\n"
         f"Description: {sentence}\n"
-        "What is the physical activity described above in a short descriptive phrase (e.g., Break Dance Twist)?\nAnswer:"
+        "What is the physical activity described above in a short descriptive phrase (e.g., Break Dance Twist)? stop repetation with massximun 3 words  \nAnswer:"
     )
     inputs = tokenizer(prompt, return_tensors="pt")
     
