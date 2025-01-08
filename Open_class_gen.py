@@ -109,24 +109,54 @@ if __name__ == "__main__":
     class_list = load_class_list()
 
     # Specify the directory to process
-    #directory_path = "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/aist/"
-    #output_csv_file = "aist_results.csv"
-    
-    #directory_path = "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/EgoBody/"
-    #output_csv_file = "EgoBody_results.csv"
-    
-    #directory_path = "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/animation/"
-    #output_csv_file = "animation_results.csv"
-    
-    #directory_path = "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/dance/"
-    #output_csv_file = "dance_results.csv"
-    
-    #directory_path = "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/fitness/"
-    #output_csv_file = "fitness_results.csv"
-    
-    #directory_path = "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/game_motion/"
-    #output_csv_file = "game_motion_results.csv"
-    
-    # Process all .txt files in the directory and subdirectories
+    directory_path = "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/aist/"
+    output_csv_file = "aist_results.csv"
     process_directory(directory_path, class_list, output_csv_file)
-
+    
+    directory_path = "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/EgoBody/"
+    output_csv_file = "EgoBody_results.csv"
+    process_directory(directory_path, class_list, output_csv_file)
+    
+    directory_path = "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/animation/"
+    output_csv_file = "animation_results.csv"
+    process_directory(directory_path, class_list, output_csv_file)
+    
+    directory_path = "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/dance/"
+    output_csv_file = "dance_results.csv"
+    process_directory(directory_path, class_list, output_csv_file)
+    
+    directory_path = "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/fitness/"
+    output_csv_file = "fitness_results.csv"
+    process_directory(directory_path, class_list, output_csv_file)
+    
+    directory_path = "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/game_motion/"
+    output_csv_file = "game_motion_results.csv"
+    process_directory(directory_path, class_list, output_csv_file)
+    
+    directory_path = "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/HAA500/"
+    output_csv_file = "HAA500_results.csv"
+    process_directory(directory_path, class_list, output_csv_file)
+    
+    directory_path = "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/humman/"
+    output_csv_file = "humman_results.csv"
+    process_directory(directory_path, class_list, output_csv_file)
+    
+    directory_path = "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/idea400/"
+    output_csv_file = "idea400_results.csv"
+    process_directory(directory_path, class_list, output_csv_file)
+    
+    directory_path = "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/kungfu/"
+    output_csv_file = "kungfu_results.csv"
+    process_directory(directory_path, class_list, output_csv_file)
+    
+    directory_path = "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/music/"
+    output_csv_file = "music_results.csv"
+    process_directory(directory_path, class_list, output_csv_file)
+    
+    directory_path = "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/perform/"
+    output_csv_file = "perform_results.csv"
+    process_directory(directory_path, class_list, output_csv_file)
+    
+    directory_path = "/media/lala/Crucial X62/CrosSim/Data/UniMocap/texts/"
+    output_csv_file = "UniMocap_results.csv"
+    process_directory(directory_path, class_list, output_csv_file)
