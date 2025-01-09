@@ -113,9 +113,9 @@ if __name__ == "__main__":
     output_csv_file = "aist_results.csv"
     process_directory(directory_path, class_list, output_csv_file)
     
-    directory_path = "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/EgoBody/"
-    output_csv_file = "EgoBody_results.csv"
-    process_directory(directory_path, class_list, output_csv_file)
+    #directory_path = "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/EgoBody/"
+    #output_csv_file = "EgoBody_results.csv"
+    #process_directory(directory_path, class_list, output_csv_file)
     
     directory_path = "/media/lala/Crucial X62/CrosSim/Data/MotionX/semantic_labels/text/animation/"
     output_csv_file = "animation_results.csv"
