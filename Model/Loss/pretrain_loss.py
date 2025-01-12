@@ -4,10 +4,13 @@ import torch.nn.functional as F
 from torch_geometric.nn import GCNConv
 from transformers import AutoModel, AutoTokenizer
 import numpy as np
-from Encoder.Multi_IMU_Encoder import DeepConvGraphEncoderPre, DeepConvGraphEncoderDownstream
-from Encoder.Gtr_Text_Encoder import EmbeddingEncoder
-from Encoder.Single_IMU_Encoder import IMUSingleNodeEncoderWithClass
-from Encoder.Pose_Encoder import GraphPoseEncoderPre, GraphPoseEncoderDown
+from info_nce import InfoNCE, info_nce
+
+#use predefined model
+def predefined_infonce(query,positive_key):
+    loss = InfoNCE()
+    output = loss(query, positive_key)
+    return output
 
 # Cosine similarity function
 def cosine_similarity(x, y):
