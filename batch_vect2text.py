@@ -26,7 +26,7 @@ encoder = AutoModel.from_pretrained("sentence-transformers/gtr-t5-base").encoder
 tokenizer = AutoTokenizer.from_pretrained("sentence-transformers/gtr-t5-base")
 
 # Directory to process
-root_directory = r"semantic_labels\motionx_seq_text_new\motionx_seq_text_v1.1\aist"  # Replace with the path to your root directory
+root_directory = r"/media/lala/Crucial X62/CrosSim/Data/UniMocap/texts"  # Replace with the path to your root directory
 
 # Process all .txt files in the directory and its subdirectories
 for dirpath, _, filenames in os.walk(root_directory):

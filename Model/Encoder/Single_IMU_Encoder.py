@@ -77,7 +77,7 @@ def main():
 
     # Define a test input tensor
     batch_size = 16
-    time_steps = 1200
+    time_steps = 100
     num_nodes = 1  # Single node
     feature_dim = 6
     num_classes = 20

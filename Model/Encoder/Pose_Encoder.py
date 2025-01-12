@@ -16,7 +16,7 @@ class TemporalAttention(nn.Module):
         return self.output_layer(x_weighted)  # [batch_size, output_dim]
 
 class GraphPoseEncoderPre(nn.Module):
-    def __init__(self, num_nodes, feature_dim, hidden_dim, embedding_dim, window_size, stride=2, output_dim=512):
+    def __init__(self, num_nodes, feature_dim, hidden_dim, embedding_dim, window_size=1, stride=1, output_dim=512):
         super(GraphPoseEncoderPre, self).__init__()
         self.window_size = window_size
         self.stride = stride
@@ -55,7 +55,7 @@ class GraphPoseEncoderPre(nn.Module):
             embeddings.append(embedding)
         
         embeddings = torch.stack(embeddings, dim=1)
-        #x_transformed = self.attention_model(embeddings)
+        x_transformed = self.attention_model(embeddings)
         
         return x_transformed
 
@@ -119,7 +119,7 @@ class GraphPoseEncoderDown(nn.Module):
         return torch.stack(embeddings, dim=1)  # (batch_size, num_windows, embedding_dim)
 
 # Support classes and functions
-class Graph:
+class PoseGraph:
     def __init__(self, max_hop=1, dilation=1):
         self.max_hop = max_hop
         self.dilation = dilation
@@ -171,20 +171,22 @@ def normalize_digraph(A):
             Dn[i, i] = Dl[i]**(-1)
     AD = np.dot(A, Dn)
     return AD
+def main():
+    # Example usage
+    graph = PoseGraph(max_hop=1, dilation=1)
+    edge_index = graph.edge_index
 
-# Example usage
-graph = Graph(max_hop=1, dilation=1)
-edge_index = graph.edge_index
+    encoder = GraphPoseEncoderPre(num_nodes=24, feature_dim=6, hidden_dim=128, embedding_dim=64, window_size=1, stride=1)
 
-encoder = DeepConvGraphEncoderPre(num_nodes=24, feature_dim=3, hidden_dim=128, embedding_dim=64, window_size=1, stride=1)
+    # Sample input: (batch_size=16, time_steps=25, num_nodes=24, feature_dim=3)
+    sample_input = torch.randn(16, 25, 24, 6)
 
-# Sample input: (batch_size=16, time_steps=25, num_nodes=24, feature_dim=3)
-sample_input = torch.randn(16, 25, 24, 3)
+    # Forward pass
+    output = encoder(sample_input, edge_index)
 
-# Forward pass
-output = encoder(sample_input, edge_index)
+    # Print shapes
+    print("Input shape:", sample_input.shape)  # (16, 25, 24, 3)
+    print("Output shape:", output.shape)  # (16, num_windows, 64)
 
-# Print shapes
-print("Input shape:", sample_input.shape)  # (16, 25, 24, 3)
-print("Output shape:", output.shape)  # (16, num_windows, 64)
-
+if __name__ == "__main__":
+    main()
