@@ -11,19 +11,20 @@ pose_edge_index = pose_graph.edge_index
 IMU_graph = IMUGraph(max_hop=1, dilation=1)
 IMU_edge_index = IMU_graph.edge_index
 
+
 class MultiModalJLR(nn.Module):
     def __init__(self):
         super(MultiModalJLR, self).__init__()
         self.text_encoder = EmbeddingEncoder()
-        self.pose_encoder = GraphPoseEncoderPre(16, 25, 24, 6)
-        self.imu_encoder = DeepConvGraphEncoderPre(16, 100, 20, 6)
-        self.single_imu_encoder = IMUSingleNodeEncoderWithClass()
+        self.pose_encoder = GraphPoseEncoderPre(num_nodes=24, feature_dim=6, hidden_dim=128, embedding_dim=64, window_size=1, stride=1)
+        self.imu_encoder = DeepConvGraphEncoderPre(num_nodes=20, feature_dim=6, hidden_dim=128, embedding_dim=64, window_size=1, stride=1)
+        self.single_imu_encoder = IMUSingleNodeEncoderWithClass(feature_dim=6, embedding_size=512, temporal_hidden_size=256,num_classes=20)
 
-    def forward(self, text, pose, imu):
+    def forward(self, text, pose, imu, sing_imu, class_data):
         text_embeddings = self.text_encoder(text)
         pose_embeddings = self.pose_encoder(pose,pose_edge_index)
         imu_embeddings = self.imu_encoder(imu,IMU_edge_index)
-        single_imu_embeddings = self.single_imu_encoder(imu)
+        single_imu_embeddings = self.single_imu_encoder(sing_imu, class_data)
         
         return text_embeddings, pose_embeddings, imu_embeddings, single_imu_embeddings
 
@@ -31,6 +32,7 @@ def compute_total_loss(model, text, pose, imu):
 
     # Forward pass through the model to get embeddings
     text_embeddings, pose_embeddings, imu_embeddings, single_imu_embeddings = model(text, pose, imu)
+    #text_embeddings, pose_embeddings, imu_embeddings = model(text, pose, imu)
     
     # Initialize InfoNCE loss with hard negative mining
     info_nce_loss = InfoNCELoss(hard_negative_mining=True)
@@ -44,33 +46,22 @@ def compute_total_loss(model, text, pose, imu):
     
     # Calculate the total loss as the sum of all individual losses
     total_loss = (loss_text_pose + loss_text_imu + 
-                  loss_pose_imu + loss_text_single_imu + 
-                  loss_imu_single_imu)
+                  loss_pose_imu
+                  + loss_text_single_imu + loss_imu_single_imu)
     
     return total_loss
 
 # Instantiate the model
 model = MultiModalJLR()
 
-# Generate dummy data
-batch_size = 16
-time_steps = 100
-num_nodes = 20
-imu_feature_dim = 3
-pose_joints = 25
-pose_joint_features = 24
-pose_feature_dim = 6
-text_feature_dim = 768
-single_imu_feature_dim = 6
-num_classes = 20
-
-text_data = torch.rand(batch_size, text_feature_dim)
-pose_data = torch.rand(batch_size, pose_joints, pose_joint_features, pose_feature_dim)
-imu_data = torch.rand(batch_size, time_steps, num_nodes, imu_feature_dim)
-single_imu_data = torch.rand(batch_size, time_steps, 1, single_imu_feature_dim)
+text_data = torch.rand(16, 768)
+pose_data = torch.rand(16, 25, 24, 6)
+imu_data = torch.rand(16, 100, 20, 6)
+single_imu_data = torch.rand(16, 100, 1, 6)
+class_data = torch.eye(20)[torch.randint(0, 20, (16,))]
 
 # Perform a forward pass with dummy data
-text_embeddings, pose_embeddings, imu_embeddings, single_imu_embeddings = model(text_data, pose_data, imu_data)
+text_embeddings, pose_embeddings, imu_embeddings, single_imu_embeddings = model(text_data, pose_data, imu_data, single_imu_data, class_data)
 
 # Print the shapes of the outputs
 print("Text Embeddings Shape:", text_embeddings.shape)

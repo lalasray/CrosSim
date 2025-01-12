@@ -189,3 +189,5 @@ def main():
     print("Input shape:", sample_input.shape)  # (16, 100, 20, 3)
     print("Output shape:", output.shape)  # (16, num_windows, 64)
 
+if __name__ == "__main__":
+    main()
