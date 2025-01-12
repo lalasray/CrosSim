@@ -10,3 +10,5 @@
 *.csv
 *.json
 Open_concise_activty.py
+/Model/Encoder/__pycache__
+/Model/Encoder/__pycache__

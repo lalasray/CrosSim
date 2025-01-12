@@ -4,67 +4,20 @@ import torch.nn.functional as F
 from torch_geometric.nn import GCNConv
 import numpy as np
 
-class IMUGraphEncoderTemporal(nn.Module):
-    def __init__(self, num_nodes=22, feature_dim=3, embedding_size=512, max_hop=1, dilation=1, temporal_hidden_size=256):
-        super(IMUGraphEncoderTemporal, self).__init__()
-        
-        self.num_nodes = num_nodes
-        self.embedding_size = embedding_size
-        self.temporal_hidden_size = temporal_hidden_size
-        
-        # Graph structure
-        self.graph = Graph(max_hop=max_hop, dilation=dilation)
-        A = self.graph.A.clone().detach().float()
-        self.register_buffer('A', A)
-        
-        # Graph convolution layers
-        self.conv1 = GCNConv(in_channels=feature_dim, out_channels=64)
-        self.conv2 = GCNConv(in_channels=64, out_channels=128)
-        self.conv3 = GCNConv(in_channels=128, out_channels=256)
-        self.conv4 = GCNConv(in_channels=256, out_channels=512)
-        
-        # Temporal modeling using LSTM
-        self.lstm = nn.LSTM(input_size=512, hidden_size=temporal_hidden_size, batch_first=True, bidirectional=True)
-        
-        # Fully connected layer for final embedding
-        self.fc = nn.Linear(2 * temporal_hidden_size, self.embedding_size)
-    
-    def forward(self, data):
-        """
-        Args:
-            data: A tensor of shape (batch_size, time_steps, num_nodes, feature_dim)
-        Returns:
-            A tensor of shape (batch_size, embedding_size)
-        """
-        batch_size, time_steps, num_nodes, feature_dim = data.shape
-        
-        # Reshape and prepare data for graph convolutions
-        data = data.view(batch_size * time_steps, num_nodes, feature_dim)
-        x = data.permute(1, 0, 2).reshape(-1, feature_dim)  # Node features
-        edge_index = self.graph.edge_index.repeat(1, time_steps)  # Repeat edges for all time steps
-        
-        # Apply graph convolutions
-        x = F.relu(self.conv1(x, edge_index))
-        x = F.relu(self.conv2(x, edge_index))
-        x = F.relu(self.conv3(x, edge_index))
-        x = F.relu(self.conv4(x, edge_index))
-        
-        # Reshape to (batch_size, time_steps, num_nodes, 512)
-        x = x.view(batch_size, time_steps, num_nodes, 512)
-        x = x.mean(dim=2)  # Aggregate node features across the graph (mean pooling)
-        
-        # Temporal modeling with LSTM
-        x, _ = self.lstm(x)  # Output shape: (batch_size, time_steps, 2 * temporal_hidden_size)
-        x = x.mean(dim=1)  # Aggregate across time steps (mean pooling)
-        
-        # Fully connected layer for the final embedding
-        x = self.fc(x)
-        return x
+class TemporalAttention(nn.Module):
+    def __init__(self, input_dim, output_dim):
+        super(TemporalAttention, self).__init__()
+        self.attention = nn.Linear(input_dim, 1)
+        self.output_layer = nn.Linear(input_dim, output_dim)
 
-   
-class IMUGraphSlidingWindowEncoder(nn.Module):
-    def __init__(self, num_nodes, feature_dim, hidden_dim, embedding_dim, window_size, stride=2):
-        super(IMUGraphSlidingWindowEncoder, self).__init__()
+    def forward(self, x):
+        weights = torch.softmax(self.attention(x), dim=1)  # [batch_size, time_steps, 1]
+        x_weighted = (x * weights).sum(dim=1)  # [batch_size, input_dim]
+        return self.output_layer(x_weighted)  # [batch_size, output_dim]
+
+class GraphPoseEncoderPre(nn.Module):
+    def __init__(self, num_nodes, feature_dim, hidden_dim, embedding_dim, window_size, stride=2, output_dim=512):
+        super(GraphPoseEncoderPre, self).__init__()
         self.window_size = window_size
         self.stride = stride
         self.num_nodes = num_nodes
@@ -79,7 +32,52 @@ class IMUGraphSlidingWindowEncoder(nn.Module):
         self.lstm = nn.LSTM(input_size=hidden_dim, hidden_size=hidden_dim, batch_first=True, bidirectional=True)
         
         # Fully connected layer for final embedding
-        self.fc = nn.Linear(hidden_dim, embedding_dim)
+        self.fc = nn.Linear(hidden_dim * 2, embedding_dim)
+        
+        # Attention model
+        self.attention_model = TemporalAttention(embedding_dim, output_dim)
+
+    def forward(self, data, edge_index):
+        batch_size, time_steps, num_nodes, feature_dim = data.shape
+        embeddings = []
+        
+        for i in range(0, time_steps - self.window_size + 1, self.stride):
+            window = data[:, i:i+self.window_size, :, :].reshape(-1, num_nodes, feature_dim)
+            
+            x = F.relu(self.conv1(window, edge_index))
+            x = F.relu(self.conv2(x, edge_index))
+            x = F.relu(self.conv3(x, edge_index))
+            x = F.relu(self.conv4(x, edge_index))
+            
+            x = x.view(batch_size, self.window_size, self.num_nodes, -1).mean(dim=2)
+            lstm_out, _ = self.lstm(x.view(batch_size, self.window_size, -1))
+            embedding = self.fc(lstm_out[:, -1, :])
+            embeddings.append(embedding)
+        
+        embeddings = torch.stack(embeddings, dim=1)
+        #x_transformed = self.attention_model(embeddings)
+        
+        return x_transformed
+
+        
+class GraphPoseEncoderDown(nn.Module):
+    def __init__(self, num_nodes, feature_dim, hidden_dim, embedding_dim, window_size, stride=2):
+        super(GraphPoseEncoderDown, self).__init__()
+        self.window_size = window_size
+        self.stride = stride
+        self.num_nodes = num_nodes
+        
+        # Graph convolution layers
+        self.conv1 = GCNConv(feature_dim, 64)
+        self.conv2 = GCNConv(64, 128)
+        self.conv3 = GCNConv(128, 256)
+        self.conv4 = GCNConv(256, hidden_dim)
+        
+        # Temporal modeling using LSTM
+        self.lstm = nn.LSTM(input_size=hidden_dim, hidden_size=hidden_dim, batch_first=True, bidirectional=True)
+        
+        # Fully connected layer for final embedding
+        self.fc = nn.Linear(hidden_dim*2, embedding_dim)
 
     def forward(self, data, edge_index):
         """
@@ -131,11 +129,11 @@ class Graph:
         self.get_edge_index()
 
     def get_edge(self):
-        self.num_node = 22  # number of body joints/nodes
+        self.num_node = 24  # number of body joints/nodes
         self_link = [(i, i) for i in range(self.num_node)]
         neighbor_link = [(1, 0), (2, 1), (3, 2), (4, 3), (5, 0), (6, 5), (7, 6), (8, 7),
                          (9, 0), (10, 9), (11, 10), (12, 11), (13, 12), (14, 11), (15, 14), (16, 15),
-                         (17, 16), (18, 11), (19, 18), (20, 19), (21, 20)]
+                         (17, 16), (18, 11), (19, 18)]
         self.edge = self_link + neighbor_link
         self.center = 0
 
@@ -178,16 +176,15 @@ def normalize_digraph(A):
 graph = Graph(max_hop=1, dilation=1)
 edge_index = graph.edge_index
 
-encoder = IMUGraphSlidingWindowEncoder(
-    num_nodes=22, feature_dim=3, hidden_dim=128, embedding_dim=64, window_size=1, stride=1)
+encoder = DeepConvGraphEncoderPre(num_nodes=24, feature_dim=3, hidden_dim=128, embedding_dim=64, window_size=1, stride=1)
 
-# Sample input: (batch_size=16, time_steps=100, num_nodes=22, feature_dim=3)
-sample_input = torch.randn(16, 100, 22, 3)
+# Sample input: (batch_size=16, time_steps=25, num_nodes=24, feature_dim=3)
+sample_input = torch.randn(16, 25, 24, 3)
 
 # Forward pass
 output = encoder(sample_input, edge_index)
 
 # Print shapes
-print("Input shape:", sample_input.shape)  # (16, 100, 22, 3)
+print("Input shape:", sample_input.shape)  # (16, 25, 24, 3)
 print("Output shape:", output.shape)  # (16, num_windows, 64)
 
