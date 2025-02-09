@@ -14,7 +14,7 @@ body_parts = [
 ]
 # Define the path to the saved .npz file
 body_part = "left_wrist"  # Replace with the actual body part name
-save_dir = r"/media/lala/Crucial X62/CrosSim/Data/MotionX/motionx_smplx/aist/subset_0000/Dance_Break/"  # Replace with the actual save directory path
+save_dir = r"Data\MotionX\motionx_smplx\aist\subset_0000\Dance_Break"  # Replace with the actual save directory path
 file_path = os.path.join(save_dir, f'{body_part}_1.npz')
 
 # Load the data from the .npz file

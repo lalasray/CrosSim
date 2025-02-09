@@ -3,9 +3,28 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 from gravity_function import apply_gravity_correction  # Ensure this is implemented correctly
+from scipy.interpolate import interp1d
+
+def reshape(data: np.ndarray, new_rows: int) -> np.ndarray:
+    """
+    Interpolates a (N, 3) array to have `new_rows` number of rows.
+
+    Parameters:
+        data (np.ndarray): Input array of shape (N, 3).
+        new_rows (int): Desired number of rows after interpolation.
+
+    Returns:
+        np.ndarray: Interpolated array of shape (new_rows, 3).
+    """
+    original_rows = data.shape[0]
+    original_indices = np.linspace(0, 1, original_rows)
+    target_indices = np.linspace(0, 1, new_rows)
+
+    interp_func = interp1d(original_indices, data, axis=0, kind='linear')
+    return interp_func(target_indices)
 
 # Directory path
-save_dir = "sample"  # Replace with the actual directory path
+save_dir = r"CrosSim\test"  # Replace with the actual directory path
 
 # Body part to visualize
 body_part = "left_wrist"  # Example body part
@@ -20,6 +39,7 @@ if os.path.exists(file_path):
     orientations = data['orientations']  # Assuming orientations are stored as Euler angles
     linear_acceleration = data['linear_acceleration']
     angular_velocity = data['angular_velocity']
+    #print(positions.shape[0],orientations.shape[0],linear_acceleration.shape[0], angular_velocity.shape[0])
 
     # Spline interpolation function
     def spline_interpolate(data, factor):
@@ -35,7 +55,12 @@ if os.path.exists(file_path):
     linear_acceleration_interp = spline_interpolate(corrected_linear_acceleration, 4)
     angular_velocity_interp = spline_interpolate(angular_velocity, 4)
     linear_acceleration_original_interp = spline_interpolate(linear_acceleration, 4)
-
+    #print(linear_acceleration_original_interp.shape,angular_velocity_interp.shape,linear_acceleration_interp.shape)
+    linear_acceleration_interp = reshape(linear_acceleration_interp, (positions.shape[0])*4)
+    angular_velocity_interp = reshape(angular_velocity_interp, (positions.shape[0])*4)
+    linear_acceleration_original_interp = reshape(linear_acceleration_original_interp, (positions.shape[0])*4)
+    #print(linear_acceleration_original_interp.shape,angular_velocity_interp.shape,linear_acceleration_interp.shape)
+    
     # Save updated data into a new file
     output_file_path = os.path.join(save_dir, f'{name}_grav.npz')
     np.savez(output_file_path,
@@ -45,6 +70,7 @@ if os.path.exists(file_path):
              linear_acceleration_with_gravity=linear_acceleration_interp,
              angular_velocity=angular_velocity_interp)
 
+    '''
     # Visualization
     fig = plt.figure(figsize=(30, 10))
 
@@ -101,6 +127,7 @@ if os.path.exists(file_path):
     # Adjust layout and display the plots
     plt.tight_layout()
     plt.show()
+    '''
 
 else:
     print(f"File for {body_part} does not exist at {file_path}")
