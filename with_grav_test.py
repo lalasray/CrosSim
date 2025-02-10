@@ -24,7 +24,7 @@ def reshape(data: np.ndarray, new_rows: int) -> np.ndarray:
     return interp_func(target_indices)
 
 # Directory path
-save_dir = r"CrosSim\test"  # Replace with the actual directory path
+save_dir = r"/media/lala/Seagate/CrosSim/aist/subset_0000/Dance_Break_3_Step_clip_3"  # Replace with the actual directory path
 
 # Body part to visualize
 body_part = "left_wrist"  # Example body part
@@ -70,7 +70,7 @@ if os.path.exists(file_path):
              linear_acceleration_with_gravity=linear_acceleration_interp,
              angular_velocity=angular_velocity_interp)
 
-    '''
+    
     # Visualization
     fig = plt.figure(figsize=(30, 10))
 
@@ -127,7 +127,7 @@ if os.path.exists(file_path):
     # Adjust layout and display the plots
     plt.tight_layout()
     plt.show()
-    '''
+    
 
 else:
     print(f"File for {body_part} does not exist at {file_path}")
