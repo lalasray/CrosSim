@@ -45,13 +45,18 @@ def compute_total_loss(text_embeddings, pose_embeddings, imu_embeddings, single_
     loss_pose_imu = predefined_infonce(pose_embeddings, imu_embeddings)
     loss_imu_single_imu = predefined_infonce(imu_embeddings, single_imu_embeddings)
 
-    total_loss = (loss_text_pose + loss_text_imu + loss_pose_imu + loss_text_single_imu + loss_imu_single_imu)/5
+    total_loss = (loss_text_pose + loss_text_imu + loss_pose_imu + loss_text_single_imu + loss_imu_single_imu) / 5
     return total_loss
 
 # Initialize model and optimizer
 model = MultiModalJLR().to(device)
-optimizer = optim.Adam(model.parameters(), lr=0.001)
-epochs = 2000
+optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-4)
+scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=10, verbose=True)
+
+# Early stopping parameters
+early_stopping_patience = 20
+best_loss = float('inf')
+stopping_counter = 0
 
 # Generate data and move to GPU
 text_data = torch.rand(batch_size, 768).to(device)
@@ -61,6 +66,7 @@ single_imu_data = torch.rand(batch_size, 100, 1, 6).to(device)
 class_data = torch.eye(imu_positions)[torch.randint(0, imu_positions, (batch_size,))].to(device)
 
 # Training loop
+epochs = 2000
 for epoch in range(epochs):
     model.train()
     optimizer.zero_grad()
@@ -71,8 +77,21 @@ for epoch in range(epochs):
     total_loss.backward()
     optimizer.step()
     
+    # Scheduler step
+    scheduler.step(total_loss)
+    
     if (epoch + 1) % 5 == 0:
         print(f"Epoch [{epoch+1}/{epochs}], Loss: {total_loss.item()}")
+    
+    # Early stopping check
+    if total_loss.item() < best_loss:
+        best_loss = total_loss.item()
+        stopping_counter = 0
+    else:
+        stopping_counter += 1
+        if stopping_counter >= early_stopping_patience:
+            print("Early stopping triggered. Training stopped.")
+            break
 
 # Save model
 torch.save(model.state_dict(), 'multimodal_jlr_model.pth')
