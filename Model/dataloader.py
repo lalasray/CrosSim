@@ -88,7 +88,7 @@ target_dir = r"/media/lala/Seagate/temp"
 dataset = DancePoseDataset(root_dir, pose_dir, imu_dir)
 
 dataloader = DataLoader(dataset, batch_size=1, collate_fn=collate_fn, shuffle=False)
-
+'''
 for motion_data, pose_data, imu_back_data, imu_belt_data, imu_chest_data, imu_forehead_data, imu_left_arm_data, imu_left_ear_data, imu_left_foot_data, imu_left_shin_data, imu_left_pocket_data, imu_left_shoulder_data, imu_left_thigh_data, imu_left_wrist_data, imu_necklace_data, imu_right_arm_data, imu_right_ear_data, imu_right_foot_data, imu_right_shin_data, imu_right_pocket_data, imu_right_shoulder_data, imu_right_thigh_data, imu_right_wrist_data in dataloader:
     print(f"Motion data shape (first sample): {motion_data[0].shape}")
     print(f"Pose data shape (first sample): {pose_data[0].shape}")
@@ -123,4 +123,24 @@ for motion_data, pose_data, imu_back_data, imu_belt_data, imu_chest_data, imu_fo
         print(f"IMU {sensor_name} acc: {sensor_data[0]['linear_acceleration'].shape}")
     
     break
+'''
+for batch_idx, (motion_data, pose_data, *imu_sensors) in enumerate(dataloader):
+    motion_data_tensor = torch.tensor(motion_data[0], dtype=torch.float32)
+    pose_data_tensor = torch.tensor(pose_data[0], dtype=torch.float32)
 
+    imu_data_tensors = {}
+    for sensor_name, sensor_data in zip(imu_data.keys(), imu_sensors):
+        imu_data_tensors[sensor_name] = {
+            'angular_velocity': torch.tensor([sample[0]['angular_velocity'] for sample in sensor_data], dtype=torch.float32),
+            'linear_acceleration_with_gravity': torch.tensor([sample[0]['linear_acceleration_with_gravity'] for sample in sensor_data], dtype=torch.float32),
+            'linear_acceleration': torch.tensor([sample[0]['linear_acceleration'] for sample in sensor_data], dtype=torch.float32),
+        }
+
+    filename = target_dir+f"/sensor_data_batch_{batch_idx}.pt"
+    torch.save({
+        'motion_data': motion_data_tensor,
+        'pose_data': pose_data_tensor,
+        'imu_data': imu_data_tensors
+    }, filename)
+
+    print(f"Batch {batch_idx} saved to {filename}")
