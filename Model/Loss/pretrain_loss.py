@@ -7,10 +7,10 @@ import numpy as np
 from info_nce import InfoNCE, info_nce
 
 #use predefined model
-def predefined_infonce(query,positive_key):
+def predefined_infonce(query, positive_key):
     loss = InfoNCE()
-    output = loss(query, positive_key)
-    return output
+    output = loss(query, positive_key)  # Computes the InfoNCE loss
+    return output  # Return the actual loss value
 
 # Cosine similarity function
 def cosine_similarity(x, y):
