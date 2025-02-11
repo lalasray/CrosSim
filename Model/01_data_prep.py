@@ -89,7 +89,12 @@ dataset = DancePoseDataset(root_dir, pose_dir, imu_dir)
 
 dataloader = DataLoader(dataset, batch_size=1, collate_fn=collate_fn, shuffle=False)
 
-for motion_data, pose_data, imu_back_data, imu_belt_data, imu_chest_data, imu_forehead_data, imu_left_arm_data, imu_left_ear_data, imu_left_foot_data, imu_left_shin_data, imu_left_pocket_data, imu_left_shoulder_data, imu_left_thigh_data, imu_left_wrist_data, imu_necklace_data, imu_right_arm_data, imu_right_ear_data, imu_right_foot_data, imu_right_shin_data, imu_right_pocket_data, imu_right_shoulder_data, imu_right_thigh_data, imu_right_wrist_data in dataloader:
+for batch_idx, (
+    motion_data, pose_data,
+    imu_back_data, imu_belt_data, imu_chest_data, imu_forehead_data,
+    imu_left_arm_data, imu_left_ear_data, imu_left_foot_data, imu_left_shin_data, imu_left_pocket_data, imu_left_shoulder_data, imu_left_thigh_data, imu_left_wrist_data, imu_necklace_data,
+    imu_right_arm_data, imu_right_ear_data, imu_right_foot_data, imu_right_shin_data, imu_right_pocket_data, imu_right_shoulder_data, imu_right_thigh_data, imu_right_wrist_data
+) in enumerate(dataloader):
     motion_data_tensor = torch.tensor(motion_data[0], dtype=torch.float32)
     pose_data_tensor = torch.tensor(pose_data[0], dtype=torch.float32)
     
@@ -181,27 +186,30 @@ for motion_data, pose_data, imu_back_data, imu_belt_data, imu_chest_data, imu_fo
     torch.save({
         'motion_data': motion_data_tensor,
         'pose_data': pose_data_tensor,
-        'back': imu_back_data,
-        'belt': imu_belt_data,
-        'chest': imu_chest_data,
-        'forehead': imu_forehead_data,
-        'left_arm': imu_left_arm_data,
-        'left_ear': imu_left_ear_data,
-        'left_foot': imu_left_foot_data,
-        'left_shin': imu_left_shin_data,
-        'left_pocket': imu_left_pocket_data,
-        'left_shoulder': imu_left_shoulder_data,
-        'left_thigh': imu_left_thigh_data,
-        'left_wrist': imu_left_wrist_data,
-        'necklace': imu_necklace_data,
-        'right_arm': imu_right_arm_data,
-        'right_ear': imu_right_ear_data,
-        'right_foot': imu_right_foot_data,
-        'right_shin': imu_right_shin_data,
-        'right_pocket': imu_right_pocket_data,
-        'right_shoulder': imu_right_shoulder_data,
-        'right_thigh': imu_right_thigh_data,
-        'right_wrist': imu_right_wrist_data
+        'imu_data': {
+            'back': {'gyro': imu_back_gyro, 'acc': imu_back_acc, 'acc_g': imu_back_acc_g},
+            'belt': {'gyro': imu_belt_gyro, 'acc': imu_belt_acc, 'acc_g': imu_belt_acc_g},
+            'chest': {'gyro': imu_chest_gyro, 'acc': imu_chest_acc, 'acc_g': imu_chest_acc_g},
+            'forehead': {'gyro': imu_forehead_gyro, 'acc': imu_forehead_acc, 'acc_g': imu_forehead_acc_g},
+            'left_arm': {'gyro': imu_left_arm_gyro, 'acc': imu_left_arm_acc, 'acc_g': imu_left_arm_acc_g},
+            'left_ear': {'gyro': imu_left_ear_gyro, 'acc': imu_left_ear_acc, 'acc_g': imu_left_ear_acc_g},
+            'left_foot': {'gyro': imu_left_foot_gyro, 'acc': imu_left_foot_acc, 'acc_g': imu_left_foot_acc_g},
+            'left_shin': {'gyro': imu_left_shin_gyro, 'acc': imu_left_shin_acc, 'acc_g': imu_left_shin_acc_g},
+            'left_pocket': {'gyro': imu_left_pocket_gyro, 'acc': imu_left_pocket_acc, 'acc_g': imu_left_pocket_acc_g},
+            'left_shoulder': {'gyro': imu_left_shoulder_gyro, 'acc': imu_left_shoulder_acc, 'acc_g': imu_left_shoulder_acc_g},
+            'left_thigh': {'gyro': imu_left_thigh_gyro, 'acc': imu_left_thigh_acc, 'acc_g': imu_left_thigh_acc_g},
+            'left_wrist': {'gyro': imu_left_wrist_gyro, 'acc': imu_left_wrist_acc, 'acc_g': imu_left_wrist_acc_g},
+            'necklace': {'gyro': imu_necklace_gyro, 'acc': imu_necklace_acc, 'acc_g': imu_necklace_acc_g},
+            'right_arm': {'gyro': imu_right_arm_gyro, 'acc': imu_right_arm_acc, 'acc_g': imu_right_arm_acc_g},
+            'right_ear': {'gyro': imu_right_ear_gyro, 'acc': imu_right_ear_acc, 'acc_g': imu_right_ear_acc_g},
+            'right_foot': {'gyro': imu_right_foot_gyro, 'acc': imu_right_foot_acc, 'acc_g': imu_right_foot_acc_g},
+            'right_shin': {'gyro': imu_right_shin_gyro, 'acc': imu_right_shin_acc, 'acc_g': imu_right_shin_acc_g},
+            'right_pocket': {'gyro': imu_right_pocket_gyro, 'acc': imu_right_pocket_acc, 'acc_g': imu_right_pocket_acc_g},
+            'right_shoulder': {'gyro': imu_right_shoulder_gyro, 'acc': imu_right_shoulder_acc, 'acc_g': imu_right_shoulder_acc_g},
+            'right_thigh': {'gyro': imu_right_thigh_gyro, 'acc': imu_right_thigh_acc, 'acc_g': imu_right_thigh_acc_g},
+            'right_wrist': {'gyro': imu_right_wrist_gyro, 'acc': imu_right_wrist_acc, 'acc_g': imu_right_wrist_acc_g},
+        }
     }, filename)
+
 
     print(f"Batch {batch_idx} saved to {filename}")
