@@ -47,35 +47,35 @@ class DancePoseDataset(Dataset):
 
         # Load IMU back sensor data
         imu_back_data = np.load(imu_back_path)
-        imu_belt_data = imu_back_path.replace("back", "belt")
-        imu_chest_data = imu_back_path.replace("back", "chest")
-        imu_forehead_data = imu_back_path.replace("back", "forehead")
-        imu_left_arm_data = imu_back_path.replace("back", "left_arm")
-        imu_left_ear_data = imu_back_path.replace("back", "left_ear")
-        imu_left_foot_data = imu_back_path.replace("back", "left_foot")
-        imu_left_shin_data = imu_back_path.replace("back", "left_shin")
-        imu_left_pocket_data = imu_back_path.replace("back", "left_pocket")
-        imu_left_shoulder_data = imu_back_path.replace("back", "left_shoulder")
-        imu_left_thigh_data = imu_back_path.replace("back", "left_thigh")
-        imu_left_wrist_data = imu_back_path.replace("back", "left_wrist")
-        imu_necklace_data = imu_back_path.replace("back", "necklace")
-        imu_right_arm_data = imu_back_path.replace("back", "right_arm")
-        imu_right_ear_data = imu_back_path.replace("back", "right_ear")
-        imu_right_foot_data = imu_back_path.replace("back", "right_foot")
-        imu_right_shin_data = imu_back_path.replace("back", "right_shin")
-        imu_right_pocket_data = imu_back_path.replace("back", "right_pocket")
-        imu_right_shoulder_data = imu_back_path.replace("back", "right_shoulder")
-        imu_right_thigh_data = imu_back_path.replace("back", "right_thigh")
-        imu_right_wrist_data = imu_back_path.replace("back", "right_wrist")
+        imu_belt_data = np.load(imu_back_path.replace("back", "belt"))
+        imu_chest_data = np.load(imu_back_path.replace("back", "chest"))
+        imu_forehead_data = np.load(imu_back_path.replace("back", "forehead"))
+        imu_left_arm_data = np.load(imu_back_path.replace("back", "left_arm"))
+        imu_left_ear_data = np.load(imu_back_path.replace("back", "left_ear"))
+        imu_left_foot_data = np.load(imu_back_path.replace("back", "left_foot"))
+        imu_left_shin_data = np.load(imu_back_path.replace("back", "left_shin"))
+        imu_left_shirt_pocket_data = np.load(imu_back_path.replace("back", "left_shirt_pocket"))
+        imu_left_shoulder_data = np.load(imu_back_path.replace("back", "left_shoulder"))
+        imu_left_thigh_data = np.load(imu_back_path.replace("back", "left_thigh"))
+        imu_left_wrist_data = np.load(imu_back_path.replace("back", "left_wrist"))
+        imu_necklace_data = np.load(imu_back_path.replace("back", "necklace"))
+        imu_right_arm_data = np.load(imu_back_path.replace("back", "right_arm"))
+        imu_right_ear_data = np.load(imu_back_path.replace("back", "right_ear"))
+        imu_right_foot_data = np.load(imu_back_path.replace("back", "right_foot"))
+        imu_right_shin_data = np.load(imu_back_path.replace("back", "right_shin"))
+        imu_right_shirt_pocket_data = np.load(imu_back_path.replace("back", "right_shirt_pocket"))
+        imu_right_shoulder_data = np.load(imu_back_path.replace("back", "right_shoulder"))
+        imu_right_thigh_data = np.load(imu_back_path.replace("back", "right_thigh"))
+        imu_right_wrist_data = np.load(imu_back_path.replace("back", "right_wrist"))
 
-        return motion_data, pose_data, imu_back_data, imu_belt_data, imu_chest_data, imu_forehead_data, imu_left_arm_data, imu_left_ear_data, imu_left_foot_data, imu_left_shin_data, imu_left_pocket_data, imu_left_shoulder_data,imu_left_thigh_data, imu_left_wrist_data, imu_necklace_data, imu_right_arm_data, imu_right_ear_data, imu_right_foot_data, imu_right_shin_data, imu_right_pocket_data, imu_right_shoulder_data, imu_right_thigh_data, imu_right_wrist_data
+        return motion_data, pose_data, imu_back_data, imu_belt_data, imu_chest_data, imu_forehead_data, imu_left_arm_data, imu_left_ear_data, imu_left_foot_data, imu_left_shin_data, imu_left_shirt_pocket_data, imu_left_shoulder_data,imu_left_thigh_data, imu_left_wrist_data, imu_necklace_data, imu_right_arm_data, imu_right_ear_data, imu_right_foot_data, imu_right_shin_data, imu_right_shirt_pocket_data, imu_right_shoulder_data, imu_right_thigh_data, imu_right_wrist_data
 
 # Custom collate function to handle variable-length sequences
 def collate_fn(batch):
     # Simply return the batch as a list of tensors
-    motion_data, pose_data, imu_back_data, imu_belt_data, imu_chest_data, imu_forehead_data, imu_left_arm_data, imu_left_ear_data, imu_left_foot_data, imu_left_shin_data, imu_left_pocket_data, imu_left_shoulder_data, imu_left_thigh_data, imu_left_wrist_data, imu_necklace_data, imu_right_arm_data, imu_right_ear_data, imu_right_foot_data, imu_right_shin_data, imu_right_pocket_data, imu_right_shoulder_data, imu_right_thigh_data, imu_right_wrist_data = zip(*batch)
+    motion_data, pose_data, imu_back_data, imu_belt_data, imu_chest_data, imu_forehead_data, imu_left_arm_data, imu_left_ear_data, imu_left_foot_data, imu_left_shin_data, imu_left_shirt_pocket_data, imu_left_shoulder_data, imu_left_thigh_data, imu_left_wrist_data, imu_necklace_data, imu_right_arm_data, imu_right_ear_data, imu_right_foot_data, imu_right_shin_data, imu_right_shirt_pocket_data, imu_right_shoulder_data, imu_right_thigh_data, imu_right_wrist_data = zip(*batch)
 
-    return list(motion_data), list(pose_data), list(imu_back_data), list(imu_belt_data), list(imu_chest_data), list(imu_forehead_data), list(imu_left_arm_data), list(imu_left_ear_data), list(imu_left_foot_data), list(imu_left_shin_data), list(imu_left_pocket_data), list(imu_left_shoulder_data), list(imu_left_thigh_data), list(imu_left_wrist_data), list(imu_necklace_data), list(imu_right_arm_data), list(imu_right_ear_data), list(imu_right_foot_data), list(imu_right_shin_data), list(imu_right_pocket_data), list(imu_right_shoulder_data), list(imu_right_thigh_data), list(imu_right_wrist_data)
+    return list(motion_data), list(pose_data), list(imu_back_data), list(imu_belt_data), list(imu_chest_data), list(imu_forehead_data), list(imu_left_arm_data), list(imu_left_ear_data), list(imu_left_foot_data), list(imu_left_shin_data), list(imu_left_shirt_pocket_data), list(imu_left_shoulder_data), list(imu_left_thigh_data), list(imu_left_wrist_data), list(imu_necklace_data), list(imu_right_arm_data), list(imu_right_ear_data), list(imu_right_foot_data), list(imu_right_shin_data), list(imu_right_shirt_pocket_data), list(imu_right_shoulder_data), list(imu_right_thigh_data), list(imu_right_wrist_data)
 
 
 
@@ -91,9 +91,9 @@ dataloader = DataLoader(dataset, batch_size=1, collate_fn=collate_fn, shuffle=Fa
 
 for batch_idx, (
     motion_data, pose_data,
-    imu_back_data, imu_belt_data, imu_chest_data, imu_forehead_data,
-    imu_left_arm_data, imu_left_ear_data, imu_left_foot_data, imu_left_shin_data, imu_left_pocket_data, imu_left_shoulder_data, imu_left_thigh_data, imu_left_wrist_data, imu_necklace_data,
-    imu_right_arm_data, imu_right_ear_data, imu_right_foot_data, imu_right_shin_data, imu_right_pocket_data, imu_right_shoulder_data, imu_right_thigh_data, imu_right_wrist_data
+    imu_back_data, imu_belt_data, imu_chest_data, imu_forehead_data, imu_necklace_data,
+    imu_left_arm_data, imu_left_ear_data, imu_left_foot_data, imu_left_shin_data, imu_left_shirt_pocket_data, imu_left_shoulder_data, imu_left_thigh_data, imu_left_wrist_data,
+    imu_right_arm_data, imu_right_ear_data, imu_right_foot_data, imu_right_shin_data, imu_right_shirt_pocket_data, imu_right_shoulder_data, imu_right_thigh_data, imu_right_wrist_data
 ) in enumerate(dataloader):
     motion_data_tensor = torch.tensor(motion_data[0], dtype=torch.float32)
     pose_data_tensor = torch.tensor(pose_data[0], dtype=torch.float32)
@@ -130,9 +130,9 @@ for batch_idx, (
     imu_left_shin_acc = torch.tensor(imu_left_shin_data[0]['linear_acceleration'], dtype=torch.float32)
     imu_left_shin_acc_g = torch.tensor(imu_left_shin_data[0]['linear_acceleration_with_gravity'], dtype=torch.float32)
 
-    imu_left_pocket_gyro = torch.tensor(imu_left_pocket_data[0]['angular_velocity'], dtype=torch.float32)
-    imu_left_pocket_acc = torch.tensor(imu_left_pocket_data[0]['linear_acceleration'], dtype=torch.float32)
-    imu_left_pocket_acc_g = torch.tensor(imu_left_pocket_data[0]['linear_acceleration_with_gravity'], dtype=torch.float32)
+    imu_left_shirt_pocket_gyro = torch.tensor(imu_left_shirt_pocket_data[0]['angular_velocity'], dtype=torch.float32)
+    imu_left_shirt_pocket_acc = torch.tensor(imu_left_shirt_pocket_data[0]['linear_acceleration'], dtype=torch.float32)
+    imu_left_shirt_pocket_acc_g = torch.tensor(imu_left_shirt_pocket_data[0]['linear_acceleration_with_gravity'], dtype=torch.float32)
 
     imu_left_shoulder_gyro = torch.tensor(imu_left_shoulder_data[0]['angular_velocity'], dtype=torch.float32)
     imu_left_shoulder_acc = torch.tensor(imu_left_shoulder_data[0]['linear_acceleration'], dtype=torch.float32)
@@ -166,9 +166,9 @@ for batch_idx, (
     imu_right_shin_acc = torch.tensor(imu_right_shin_data[0]['linear_acceleration'], dtype=torch.float32)
     imu_right_shin_acc_g = torch.tensor(imu_right_shin_data[0]['linear_acceleration_with_gravity'], dtype=torch.float32)
 
-    imu_right_pocket_gyro = torch.tensor(imu_right_pocket_data[0]['angular_velocity'], dtype=torch.float32)
-    imu_right_pocket_acc = torch.tensor(imu_right_pocket_data[0]['linear_acceleration'], dtype=torch.float32)
-    imu_right_pocket_acc_g = torch.tensor(imu_right_pocket_data[0]['linear_acceleration_with_gravity'], dtype=torch.float32)
+    imu_right_shirt_pocket_gyro = torch.tensor(imu_right_shirt_pocket_data[0]['angular_velocity'], dtype=torch.float32)
+    imu_right_shirt_pocket_acc = torch.tensor(imu_right_shirt_pocket_data[0]['linear_acceleration'], dtype=torch.float32)
+    imu_right_shirt_pocket_acc_g = torch.tensor(imu_right_shirt_pocket_data[0]['linear_acceleration_with_gravity'], dtype=torch.float32)
 
     imu_right_thigh_gyro = torch.tensor(imu_right_thigh_data[0]['angular_velocity'], dtype=torch.float32)
     imu_right_thigh_acc = torch.tensor(imu_right_thigh_data[0]['linear_acceleration'], dtype=torch.float32)
@@ -182,7 +182,7 @@ for batch_idx, (
     imu_right_wrist_acc = torch.tensor(imu_right_wrist_data[0]['linear_acceleration'], dtype=torch.float32)
     imu_right_wrist_acc_g = torch.tensor(imu_right_wrist_data[0]['linear_acceleration_with_gravity'], dtype=torch.float32)
 
-    filename = target_dir+f"/sensor_data_batch_{batch_idx}.pt"
+    filename = target_dir+f"/Datapoint_{batch_idx}.pt"
     torch.save({
         'motion_data': motion_data_tensor,
         'pose_data': pose_data_tensor,
@@ -195,7 +195,7 @@ for batch_idx, (
             'left_ear': {'gyro': imu_left_ear_gyro, 'acc': imu_left_ear_acc, 'acc_g': imu_left_ear_acc_g},
             'left_foot': {'gyro': imu_left_foot_gyro, 'acc': imu_left_foot_acc, 'acc_g': imu_left_foot_acc_g},
             'left_shin': {'gyro': imu_left_shin_gyro, 'acc': imu_left_shin_acc, 'acc_g': imu_left_shin_acc_g},
-            'left_pocket': {'gyro': imu_left_pocket_gyro, 'acc': imu_left_pocket_acc, 'acc_g': imu_left_pocket_acc_g},
+            'left_shirt_pocket': {'gyro': imu_left_shirt_pocket_gyro, 'acc': imu_left_shirt_pocket_acc, 'acc_g': imu_left_shirt_pocket_acc_g},
             'left_shoulder': {'gyro': imu_left_shoulder_gyro, 'acc': imu_left_shoulder_acc, 'acc_g': imu_left_shoulder_acc_g},
             'left_thigh': {'gyro': imu_left_thigh_gyro, 'acc': imu_left_thigh_acc, 'acc_g': imu_left_thigh_acc_g},
             'left_wrist': {'gyro': imu_left_wrist_gyro, 'acc': imu_left_wrist_acc, 'acc_g': imu_left_wrist_acc_g},
@@ -204,12 +204,11 @@ for batch_idx, (
             'right_ear': {'gyro': imu_right_ear_gyro, 'acc': imu_right_ear_acc, 'acc_g': imu_right_ear_acc_g},
             'right_foot': {'gyro': imu_right_foot_gyro, 'acc': imu_right_foot_acc, 'acc_g': imu_right_foot_acc_g},
             'right_shin': {'gyro': imu_right_shin_gyro, 'acc': imu_right_shin_acc, 'acc_g': imu_right_shin_acc_g},
-            'right_pocket': {'gyro': imu_right_pocket_gyro, 'acc': imu_right_pocket_acc, 'acc_g': imu_right_pocket_acc_g},
+            'right_shirt_pocket': {'gyro': imu_right_shirt_pocket_gyro, 'acc': imu_right_shirt_pocket_acc, 'acc_g': imu_right_shirt_pocket_acc_g},
             'right_shoulder': {'gyro': imu_right_shoulder_gyro, 'acc': imu_right_shoulder_acc, 'acc_g': imu_right_shoulder_acc_g},
             'right_thigh': {'gyro': imu_right_thigh_gyro, 'acc': imu_right_thigh_acc, 'acc_g': imu_right_thigh_acc_g},
             'right_wrist': {'gyro': imu_right_wrist_gyro, 'acc': imu_right_wrist_acc, 'acc_g': imu_right_wrist_acc_g},
         }
     }, filename)
-
-
+    
     print(f"Batch {batch_idx} saved to {filename}")
