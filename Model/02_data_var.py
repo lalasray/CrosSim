@@ -31,10 +31,8 @@ class DancePoseDataset(Dataset):
 # Custom collate function for batch loading
 def collate_fn(batch):
     motion_data, pose_data, imu_data_list = zip(*batch)
-
-    # Convert lists to tensors where possible
-    motion_data = [torch.tensor(md, dtype=torch.float32) for md in motion_data]
-    pose_data = [torch.tensor(pd, dtype=torch.float32) for pd in pose_data]
+    #motion_data = [torch.load(md, dtype=torch.float32) for md in motion_data]
+    #pose_data = [torch.load(pd, dtype=torch.float32) for pd in pose_data]
 
     return motion_data, pose_data, imu_data_list  # IMU data remains a dict per sample
 
