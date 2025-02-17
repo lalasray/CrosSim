@@ -80,10 +80,10 @@ def collate_fn(batch):
 
 
 # Example usage
-root_dir = r"/media/lala/Seagate/CrosSim"
-pose_dir = r"/media/lala/Seagate/CrosSim"
-imu_dir = r"/media/lala/Seagate/CrosSim"
-target_dir = r"/media/lala/Seagate/temp"
+root_dir = r"/media/lala/Crucial X62/CrosSim/Data/MotionX/text"
+pose_dir = r"/media/lala/Crucial X62/CrosSim/Data/MotionX/motionx_smplx"
+imu_dir = r"/media/lala/Crucial X62/CrosSim/Data/MotionX/motionx_smplx"
+target_dir = r"/media/lala/Crucial X62/CrosSim/Data/Processed"
 
 dataset = DancePoseDataset(root_dir, pose_dir, imu_dir)
 
