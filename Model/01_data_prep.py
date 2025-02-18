@@ -23,7 +23,7 @@ class DancePoseDataset(Dataset):
 
         for pt_file in pt_files:
             base_name = os.path.basename(pt_file).replace("_gtr.pt", "")  # Remove _gtr.pt suffix
-            npy_pattern = os.path.join(self.pose_dir, "**", f"{base_name}.npy")
+            npy_pattern = os.path.join(self.pose_dir, "**", f"{base_name}_processed.npz")
             npy_files = glob.glob(npy_pattern, recursive=True)
             imu_back_pattern = os.path.join(self.imu_dir, "**", f"{base_name}/back_1_grav.npz")
             imu_back = glob.glob(imu_back_pattern, recursive=True)
@@ -58,7 +58,7 @@ class DancePoseDataset(Dataset):
         imu_left_shoulder_data = np.load(imu_back_path.replace("back", "left_shoulder"))
         imu_left_thigh_data = np.load(imu_back_path.replace("back", "left_thigh"))
         imu_left_wrist_data = np.load(imu_back_path.replace("back", "left_wrist"))
-        imu_necklace_data = np.load(imu_back_path.replace("back", "necklace"))
+        imu_necklace_data = np.load(imu_back_path.replace("back", "Necklace"))
         imu_right_arm_data = np.load(imu_back_path.replace("back", "right_arm"))
         imu_right_ear_data = np.load(imu_back_path.replace("back", "right_ear"))
         imu_right_foot_data = np.load(imu_back_path.replace("back", "right_foot"))
@@ -80,10 +80,10 @@ def collate_fn(batch):
 
 
 # Example usage
-text_dir = r"/media/lala/Crucial X62/CrosSim/Data/MotionX/text"
-pose_dir = r"/media/lala/Crucial X62/CrosSim/Data/MotionX/motionx_smplx"
-imu_dir = r"/media/lala/Crucial X62/CrosSim/Data/MotionX/motionx_smplx"
-target_dir = r"/media/lala/Crucial X62/CrosSim/Data/Processed"
+text_dir = r"/home/lala/Documents/GitHub/CrosSim_Data/UniMocap/text"
+pose_dir = r"/home/lala/Documents/GitHub/CrosSim_Data/UniMocap/pose"
+imu_dir = r"/home/lala/Documents/GitHub/CrosSim_Data/UniMocap/imu"
+target_dir = r"/home/lala/Documents/GitHub/CrosSim_Data/UniMocap/processed"
 
 dataset = DancePoseDataset(text_dir, pose_dir, imu_dir)
 
@@ -96,7 +96,9 @@ for batch_idx, (
     imu_right_arm_data, imu_right_ear_data, imu_right_foot_data, imu_right_shin_data, imu_right_shirt_pocket_data, imu_right_shoulder_data, imu_right_thigh_data, imu_right_wrist_data
 ) in enumerate(dataloader):
     motion_data_tensor = torch.tensor(motion_data[0], dtype=torch.float32)
-    pose_data_tensor = torch.tensor(pose_data[0], dtype=torch.float32)
+    pose_joint = torch.tensor(pose_data[0]['joints'], dtype=torch.float32)
+    pose_body = torch.tensor(pose_data[0]['pose_body'], dtype=torch.float32)
+    pose_trans = torch.tensor(pose_data[0]['translation'], dtype=torch.float32)
     
     imu_back_gyro = torch.tensor(imu_back_data[0]['angular_velocity'], dtype=torch.float32)
     imu_back_acc = torch.tensor(imu_back_data[0]['linear_acceleration'], dtype=torch.float32)
@@ -182,10 +184,10 @@ for batch_idx, (
     imu_right_wrist_acc = torch.tensor(imu_right_wrist_data[0]['linear_acceleration'], dtype=torch.float32)
     imu_right_wrist_acc_g = torch.tensor(imu_right_wrist_data[0]['linear_acceleration_with_gravity'], dtype=torch.float32)
 
-    filename = target_dir+f"/Datapoint_{batch_idx}.pt"
+    filename = target_dir+f"/Datapoint_{batch_idx}_1.pt"
     torch.save({
         'motion_data': motion_data_tensor,
-        'pose_data': pose_data_tensor,
+        'pose_data': {'joint': pose_joint, 'body': pose_body, 'trans': pose_trans},
         'imu_data': {
             'back': {'gyro': imu_back_gyro, 'acc': imu_back_acc, 'acc_g': imu_back_acc_g},
             'belt': {'gyro': imu_belt_gyro, 'acc': imu_belt_acc, 'acc_g': imu_belt_acc_g},
