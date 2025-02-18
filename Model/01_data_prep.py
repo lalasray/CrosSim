@@ -10,15 +10,15 @@ def find_pt_files(root_dir):
 
 # Custom Dataset
 class DancePoseDataset(Dataset):
-    def __init__(self, root_dir, pose_dir, imu_dir):
-        self.root_dir = root_dir
+    def __init__(self, text_dir, pose_dir, imu_dir):
+        self.text_dir = text_dir
         self.pose_dir = pose_dir
         self.imu_dir = imu_dir
         self.file_paths = self.find_valid_pairs()
 
     def find_valid_pairs(self):
         """Find all valid (.pt, .npy) file pairs."""
-        pt_files = find_pt_files(self.root_dir)
+        pt_files = find_pt_files(self.text_dir)
         valid_pairs = []
 
         for pt_file in pt_files:
@@ -80,12 +80,12 @@ def collate_fn(batch):
 
 
 # Example usage
-root_dir = r"/media/lala/Crucial X62/CrosSim/Data/MotionX/text"
+text_dir = r"/media/lala/Crucial X62/CrosSim/Data/MotionX/text"
 pose_dir = r"/media/lala/Crucial X62/CrosSim/Data/MotionX/motionx_smplx"
 imu_dir = r"/media/lala/Crucial X62/CrosSim/Data/MotionX/motionx_smplx"
 target_dir = r"/media/lala/Crucial X62/CrosSim/Data/Processed"
 
-dataset = DancePoseDataset(root_dir, pose_dir, imu_dir)
+dataset = DancePoseDataset(text_dir, pose_dir, imu_dir)
 
 dataloader = DataLoader(dataset, batch_size=1, collate_fn=collate_fn, shuffle=False)
 
