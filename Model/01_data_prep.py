@@ -5,8 +5,21 @@ import numpy as np
 from torch.utils.data import Dataset, DataLoader
 
 # Function to find all .pt files in a directory and subdirectories
+#def find_pt_files(root_dir):
+#    return glob.glob(os.path.join(root_dir, "**", "*.pt"), recursive=True)
+
 def find_pt_files(root_dir):
-    return glob.glob(os.path.join(root_dir, "**", "*.pt"), recursive=True)
+    pt_files = []
+    stack = [root_dir]
+    while stack:
+        current_dir = stack.pop()
+        with os.scandir(current_dir) as it:
+            for entry in it:
+                if entry.is_dir():
+                    stack.append(entry.path)
+                elif entry.is_file() and entry.name.endswith(".pt"):
+                    pt_files.append(entry.path)
+    return pt_files
 
 # Custom Dataset
 class DancePoseDataset(Dataset):
@@ -20,7 +33,7 @@ class DancePoseDataset(Dataset):
         """Find all valid (.pt, .npy) file pairs."""
         pt_files = find_pt_files(self.text_dir)
         valid_pairs = []
-
+        '''
         for pt_file in pt_files:
             base_name = os.path.basename(pt_file).replace("_gtr.pt", "")  # Remove _gtr.pt suffix
             npy_pattern = os.path.join(self.pose_dir, "**", f"{base_name}_processed.npz")
@@ -30,6 +43,15 @@ class DancePoseDataset(Dataset):
             
             if npy_files and imu_back:
                 valid_pairs.append((pt_file, npy_files[0], imu_back[0]))
+        '''
+        for pt_file in pt_files:
+            base_name = os.path.basename(pt_file).replace("_gtr.pt", "")  # Remove _gtr.pt suffix
+            npy_file = os.path.join(self.pose_dir, base_name + "_processed.npz")
+            imu_back_file = os.path.join(self.imu_dir, base_name, "back_1_grav.npz")
+
+            if os.path.exists(npy_file) and os.path.exists(imu_back_file):
+                valid_pairs.append((pt_file, npy_file, imu_back_file))
+
 
         return valid_pairs
 
