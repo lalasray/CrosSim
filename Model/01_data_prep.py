@@ -47,7 +47,7 @@ class DancePoseDataset(Dataset):
         for pt_file in pt_files:
             base_name = os.path.basename(pt_file).replace("_gtr.pt", "")  # Remove _gtr.pt suffix
             npy_file = os.path.join(self.pose_dir, base_name + "_processed.npz")
-            imu_back_file = os.path.join(self.imu_dir, base_name, "back_1_grav.npz")
+            imu_back_file = os.path.join(self.imu_dir, base_name, "back_2_grav.npz")
 
             if os.path.exists(npy_file) and os.path.exists(imu_back_file):
                 valid_pairs.append((pt_file, npy_file, imu_back_file))
@@ -206,7 +206,7 @@ for batch_idx, (
     imu_right_wrist_acc = torch.tensor(imu_right_wrist_data[0]['linear_acceleration'], dtype=torch.float32)
     imu_right_wrist_acc_g = torch.tensor(imu_right_wrist_data[0]['linear_acceleration_with_gravity'], dtype=torch.float32)
 
-    filename = target_dir+f"/Datapoint_{batch_idx}_1.pt"
+    filename = target_dir+f"/Datapoint_{batch_idx}_2.pt"
     torch.save({
         'motion_data': motion_data_tensor,
         'pose_data': {'joint': pose_joint, 'body': pose_body, 'trans': pose_trans},
