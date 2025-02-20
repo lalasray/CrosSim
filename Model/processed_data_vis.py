@@ -1,7 +1,8 @@
 import torch
 
 # Load the .pt file
-file_path = "/home/lala/Documents/GitHub/CrosSim_Data/UniMocap/processed/Datapoint_0_1.pt"  # Change this to your actual file path
+#file_path = "/home/lala/Documents/GitHub/CrosSim_Data/UniMocap/processed/Datapoint_0_1.pt"  # Change this to your actual file path
+file_path = "/home/lala/Documents/GitHub/CrosSim_Data/UniMocap/variations/Datapoint_0_1_opportunity.pt"
 data = torch.load(file_path)
 
 # Function to print tensor shapes
@@ -20,3 +21,4 @@ def print_shapes(data, prefix=""):
 
 # Print shapes of all tensors in the file
 print_shapes(data)
+print(data)
