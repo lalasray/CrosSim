@@ -1,6 +1,5 @@
 import torch
 import os
-import glob
 
 # Define the dataset-specific IMU sensor placements
 dataset_sensors = {
@@ -28,37 +27,35 @@ dataset_sensors = {
     "totalcapture": {"left_shoulder", "left_arm", "right_shoulder", "right_arm", "left_foot", "right_foot", "left_shin", "right_shin", "left_thigh", "right_thigh", "head", "chest", "belt"}
 }
 
-def process_dataset(root_dir, output_dir):
-    os.makedirs(output_dir, exist_ok=True)
+# Input file path
+file_path = "/home/lala/Documents/GitHub/CrosSim_Data/UniMocap/processed/Datapoint_0_1.pt"
+output_dir = "/home/lala/Documents/GitHub/CrosSim_Data/UniMocap/variations/"
+
+# Ensure output directory exists
+os.makedirs(output_dir, exist_ok=True)
+
+def process_file_for_all_datasets(file_path, output_dir):
+    # Load the file
+    data = torch.load(file_path)
     
     for dataset_name, allowed_sensors in dataset_sensors.items():
-        dataset_output_dir = os.path.join(output_dir, dataset_name)
-        os.makedirs(dataset_output_dir, exist_ok=True)
+        modified_data = data.copy()
         
-        # Find all .pt files in the root directory
-        pt_files = glob.glob(os.path.join(root_dir, "**", "*.pt"), recursive=True)
+        # Modify only the IMU data
+        if "imu_data" in modified_data:
+            imu_data = modified_data["imu_data"].copy()
+            for sensor in imu_data.keys():
+                if sensor not in allowed_sensors:
+                    imu_data[sensor] = torch.zeros_like(imu_data[sensor])  # Zero out
+            modified_data["imu_data"] = imu_data
         
-        for pt_file in pt_files:
-            data = torch.load(pt_file)
-            imu_data = data.get("imu_data", {})
-            
-            # Modify IMU data based on allowed sensors
-            modified_imu_data = {}
-            for sensor, tensor in imu_data.items():
-                if sensor in allowed_sensors:
-                    modified_imu_data[sensor] = tensor  # Keep original
-                else:
-                    modified_imu_data[sensor] = torch.zeros_like(tensor)  # Zero out
-            
-            data["imu_data"] = modified_imu_data
-            
-            # Save the modified file
-            filename = os.path.basename(pt_file)
-            torch.save(data, os.path.join(dataset_output_dir, filename))
-            
-            print(f"Processed {filename} for {dataset_name}")
+        # Construct output filename
+        base_name = os.path.basename(file_path).replace(".pt", f"_{dataset_name}.pt")
+        output_path = os.path.join(output_dir, base_name)
+        
+        # Save the modified file
+        torch.save(modified_data, output_path)
+        print(f"Processed for {dataset_name}: {output_path}")
 
-# Example usage
-root_dir = "/media/lala/Seagate/temp"  # Change this to your dataset directory
-output_dir = "/media/lala/Seagate/filtered_imu"  # Change this to the desired output directory
-process_dataset(root_dir, output_dir)
+# Process the file for all datasets
+process_file_for_all_datasets(file_path, output_dir)
