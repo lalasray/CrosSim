@@ -42,12 +42,14 @@ datasets = [
 ]
 
 combined_dataset = ConcatDataset(datasets)
-dataloader = DataLoader(combined_dataset, batch_size=4, shuffle=True, collate_fn=collate_fn)
+dataloader = DataLoader(combined_dataset, batch_size=32, shuffle=True, collate_fn=collate_fn)
 for batch in dataloader:
-    print(batch)
+    print("Batch keys:", batch.keys())
+    print("Motion shape:", batch["motion"].shape if batch["motion"] is not None else "None")
+    print("Pose Joint shape:", batch["pose_joint"].shape if batch["pose_joint"] is not None else "None")
     break
 
-
+'''
 batch_size = 16
 Embedding_size = 512
 window = 1
@@ -133,3 +135,4 @@ for epoch in range(epochs):
 
 # Save model
 torch.save(model.state_dict(), 'multimodal_jlr_model.pth')
+'''
