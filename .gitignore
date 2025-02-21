@@ -1,14 +1,9 @@
 /__pycache__
-/motion_IMU
-/semantic_labels
 /Model/__pycache__
-/sample
-/test
-/test_label
-/Data
 *.csv
 *.json
 /Model/Encoder/__pycache__
-/Model/Encoder/__pycache__
+/Model/Decoder/__pycache__
+/Model/Loss/__pycache__
 *.pth
 /CrosSim_Data
