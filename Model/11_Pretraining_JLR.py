@@ -12,6 +12,7 @@ from torch.utils.data import DataLoader, ConcatDataset
 
 # Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+'''
 data_dir = "/home/lala/Documents/GitHub/CrosSim_Data/UniMocap/processed/"  # Update path
 OGdataset = OGMotionDataset(data_dir)
 openpack = MotionDataset(data_dir, "openpack")
@@ -135,4 +136,3 @@ for epoch in range(epochs):
 
 # Save model
 torch.save(model.state_dict(), 'multimodal_jlr_model.pth')
-'''

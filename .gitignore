@@ -13,3 +13,4 @@ Open_concise_activty.py
 /Model/Encoder/__pycache__
 /Model/Encoder/__pycache__
 *.pth
+/CrosSim_Data
