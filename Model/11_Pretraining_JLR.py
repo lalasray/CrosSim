@@ -6,9 +6,47 @@ from Encoder.Single_IMU_Encoder import IMUSingleNodeEncoderWithClass
 from Encoder.Pose_Encoder import GraphPoseEncoderPre, PoseGraph
 from Loss.pretrain_loss import predefined_infonce
 import torch.optim as optim
+from dataloader_var import MotionDataset,OGMotionDataset,collate_fn
+from torch.utils.data import DataLoader, ConcatDataset
+
 
 # Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+data_dir = "/home/lala/Documents/GitHub/CrosSim_Data/UniMocap/processed/"  # Update path
+OGdataset = OGMotionDataset(data_dir)
+openpack = MotionDataset(data_dir, "openpack")
+alshar = MotionDataset(data_dir, "alshar")
+opportunity = MotionDataset(data_dir, "opportunity")
+ucihar = MotionDataset(data_dir, "ucihar")
+wHAR = MotionDataset(data_dir, "wHAR")
+shoaib = MotionDataset(data_dir, "shoaib")
+har70 = MotionDataset(data_dir, "har70")
+realworld = MotionDataset(data_dir, "realworld")
+pamap2 = MotionDataset(data_dir, "pamap2")
+uschad = MotionDataset(data_dir, "uschad")
+mhealth = MotionDataset(data_dir, "mhealth")
+harth = MotionDataset(data_dir, "harth")
+wharf = MotionDataset(data_dir, "wharf")
+dsads = MotionDataset(data_dir, "dsads")
+wisdm = MotionDataset(data_dir, "wisdm")
+utdmhad = MotionDataset(data_dir, "utdmhad")
+mmact = MotionDataset(data_dir, "mmact")
+mmfit = MotionDataset(data_dir, "mmfit")
+dip = MotionDataset(data_dir, "dip")
+totalcapture = MotionDataset(data_dir, "totalcapture")
+
+datasets = [
+    OGdataset, openpack, alshar, opportunity, utdmhad, ucihar, wHAR, shoaib,
+    har70, realworld, pamap2, uschad, mhealth, harth, wharf, wisdm, dsads,
+    mmact, mmfit, dip, totalcapture
+]
+
+combined_dataset = ConcatDataset(datasets)
+dataloader = DataLoader(combined_dataset, batch_size=4, shuffle=True, collate_fn=collate_fn)
+for batch in dataloader:
+    print(batch)
+    break
+
 
 batch_size = 16
 Embedding_size = 512
