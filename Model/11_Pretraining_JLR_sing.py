@@ -12,11 +12,8 @@ from torch.utils.data import DataLoader, ConcatDataset
 
 # Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-batch_size = 32
-
-
-data_dir = "/home/lala/Documents/GitHub/CrosSim/CrosSim_Data/UniMocap/processed"  # Update path
+'''
+data_dir = "/home/lala/Documents/GitHub/CrosSim_Data/UniMocap/processed/"  # Update path
 OGdataset = OGMotionDataset(data_dir)
 openpack = MotionDataset(data_dir, "openpack")
 alshar = MotionDataset(data_dir, "alshar")
@@ -46,17 +43,16 @@ datasets = [
 ]
 
 combined_dataset = ConcatDataset(datasets)
-dataloader = DataLoader(combined_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
+dataloader = DataLoader(combined_dataset, batch_size=32, shuffle=True, collate_fn=collate_fn)
 for batch in dataloader:
     print("Batch keys:", batch.keys())
-    print("Motion shape:", batch["motion"].squeeze(1).shape )
-    pose = torch.cat([batch["pose_trans"], batch["pose_body"]], dim=-1)
-    full_Pose = pose.view(pose.shape[0], pose.shape[1], 24, 3)
-    pose_with_angle = torch.cat([full_Pose, batch["pose_joint"].squeeze(2)], dim=-1)
-    print("Pose Joint shape:", pose_with_angle.shape) 
+    print("Motion shape:", batch["motion"].shape if batch["motion"] is not None else "None")
+    print("Pose Joint shape:", batch["pose_joint"].shape if batch["pose_joint"] is not None else "None")
     break
 
-Embedding_size = 768
+'''
+batch_size = 16
+Embedding_size = 512
 window = 1
 stride_size = 1
 Pose_joints = 24
@@ -73,22 +69,22 @@ class MultiModalJLR(nn.Module):
         self.text_encoder = EmbeddingEncoder().to(device)
         self.pose_encoder = GraphPoseEncoderPre(num_nodes=Pose_joints, feature_dim=6, hidden_dim=128, embedding_dim=64, window_size=window, stride=stride_size, output_dim=Embedding_size).to(device)
         self.imu_encoder = DeepConvGraphEncoderPre(num_nodes=imu_positions, feature_dim=6, hidden_dim=128, embedding_dim=64, window_size=window*4, stride=stride_size*4, output_dim=Embedding_size).to(device)
-        self.imu_encoder_grav = DeepConvGraphEncoderPre(num_nodes=imu_positions, feature_dim=6, hidden_dim=128, embedding_dim=64, window_size=window*4, stride=stride_size*4, output_dim=Embedding_size).to(device)
+        self.single_imu_encoder = IMUSingleNodeEncoderWithClass(feature_dim=6, embedding_size=Embedding_size, temporal_hidden_size=256, num_classes=imu_positions).to(device)
 
-    def forward(self, text, pose, imu, imu_grav):
+    def forward(self, text, pose, imu, sing_imu, class_data):
         text_embeddings = self.text_encoder(text)
         pose_embeddings = self.pose_encoder(pose, pose_edge_index)
         imu_embeddings = self.imu_encoder(imu, IMU_edge_index)
-        imu_embeddings_grav = self.imu_encoder_grav(imu_grav, IMU_edge_index)
+        single_imu_embeddings = self.single_imu_encoder(sing_imu, class_data)
         
-        return text_embeddings, pose_embeddings, imu_embeddings, imu_embeddings_grav
+        return text_embeddings, pose_embeddings, imu_embeddings, single_imu_embeddings
 
-def compute_total_loss(text_embeddings, pose_embeddings, imu_embeddings, imu_embeddings_grav):
+def compute_total_loss(text_embeddings, pose_embeddings, imu_embeddings, single_imu_embeddings):
     loss_text_pose = predefined_infonce(text_embeddings, pose_embeddings)
     loss_text_imu = predefined_infonce(text_embeddings, imu_embeddings)
-    loss_text_single_imu = predefined_infonce(text_embeddings, imu_embeddings_grav)
+    loss_text_single_imu = predefined_infonce(text_embeddings, single_imu_embeddings)
     loss_pose_imu = predefined_infonce(pose_embeddings, imu_embeddings)
-    loss_imu_single_imu = predefined_infonce(imu_embeddings, imu_embeddings_grav)
+    loss_imu_single_imu = predefined_infonce(imu_embeddings, single_imu_embeddings)
 
     total_loss = (loss_text_pose + loss_text_imu + loss_pose_imu + loss_text_single_imu + loss_imu_single_imu) / 5
     return total_loss
@@ -107,19 +103,18 @@ stopping_counter = 0
 text_data = torch.rand(batch_size, 768).to(device)
 pose_data = torch.rand(batch_size, 25, Pose_joints, 6).to(device)
 imu_data = torch.rand(batch_size, 100, imu_positions, 6).to(device)
-imu_data_grav = torch.rand(batch_size, 100, imu_positions, 6).to(device)
+single_imu_data = torch.rand(batch_size, 100, 1, 6).to(device)
+class_data = torch.eye(imu_positions)[torch.randint(0, imu_positions, (batch_size,))].to(device)
 
-print(pose_data.shape)
-'''
 # Training loop
 epochs = 2000
 for epoch in range(epochs):
     model.train()
     optimizer.zero_grad()
     
-    text_embeddings, pose_embeddings, imu_embeddings, imu_emb_grav = model(text_data, pose_data, imu_data, imu_data_grav)
+    text_embeddings, pose_embeddings, imu_embeddings, single_imu_embeddings = model(text_data, pose_data, imu_data, single_imu_data, class_data)
     
-    total_loss = compute_total_loss(text_embeddings, pose_embeddings, imu_embeddings, imu_emb_grav)
+    total_loss = compute_total_loss(text_embeddings, pose_embeddings, imu_embeddings, single_imu_embeddings)
     total_loss.backward()
     optimizer.step()
     
@@ -141,4 +136,3 @@ for epoch in range(epochs):
 
 # Save model
 torch.save(model.state_dict(), 'multimodal_jlr_model.pth')
-'''

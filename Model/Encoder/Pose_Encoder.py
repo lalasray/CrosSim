@@ -131,9 +131,39 @@ class PoseGraph:
     def get_edge(self):
         self.num_node = 24  # number of body joints/nodes
         self_link = [(i, i) for i in range(self.num_node)]
-        neighbor_link = [(1, 0), (2, 1), (3, 2), (4, 3), (5, 0), (6, 5), (7, 6), (8, 7),
-                         (9, 0), (10, 9), (11, 10), (12, 11), (13, 12), (14, 11), (15, 14), (16, 15),
-                         (17, 16), (18, 11), (19, 18)]
+        neighbor_link = [
+            # Pelvis
+            (0, 1),  # Pelvis - Left_hip
+            (0, 2),  # Pelvis - Right_hip
+
+            # Left side of the body
+            (1, 4),  # Left_hip - Left_knee
+            (4, 7),  # Left_knee - Left_ankle
+            (7, 10), # Left_ankle - Left_foot
+            (1, 14), # Left_hip - Left_collar
+            (14, 16), # Left_collar - Left_shoulder
+            (16, 18), # Left_shoulder - Left_elbow
+            (18, 20), # Left_elbow - Left_wrist
+            (20, 22), # Left_wrist - Left_palm
+            
+            # Right side of the body
+            (2, 5),  # Right_hip - Right_knee
+            (5, 8),  # Right_knee - Right_ankle
+            (8, 11), # Right_ankle - Right_foot
+            (2, 15), # Right_hip - Right_collar
+            (15, 17), # Right_collar - Right_shoulder
+            (17, 19), # Right_shoulder - Right_elbow
+            (19, 21), # Right_elbow - Right_wrist
+            (21, 23), # Right_wrist - Right_palm
+            
+            # Spine and Neck
+            (0, 3),  # Pelvis - Spine1
+            (3, 6),  # Spine1 - Spine2
+            (6, 9),  # Spine2 - Spine3
+            (9, 12), # Spine3 - Neck
+            (12, 13), # Neck - Head
+        ]
+
         self.edge = self_link + neighbor_link
         self.center = 0
 
