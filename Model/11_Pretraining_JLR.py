@@ -136,7 +136,7 @@ optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-4)
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=10, verbose=True)
 
 # Early stopping parameters
-early_stopping_patience = 20
+early_stopping_patience = 200
 best_loss = float('inf')
 stopping_counter = 0
 epochs = 2000
@@ -170,7 +170,7 @@ for epoch in range(epochs):
         # Scheduler step
         scheduler.step(total_loss)
     
-        if (epoch + 1) % 5 == 0:
+        if (epoch + 1) % 2 == 0:
             print(f"Epoch [{epoch+1}/{epochs}], Loss: {total_loss.item()}")
     
         # Early stopping check
