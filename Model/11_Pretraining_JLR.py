@@ -44,6 +44,32 @@ datasets = [
     har70, realworld, pamap2, uschad, mhealth, harth, wharf, wisdm, dsads,
     mmact, mmfit, dip, totalcapture
 ]
+sensor_positions_acc = [
+    "back.acc", "belt.acc", "chest.acc", "forehead.acc",
+    "left_arm.acc", "left_ear.acc", "left_foot.acc", "left_shin.acc",
+    "left_shirt_pocket.acc", "left_shoulder.acc", "left_thigh.acc", "left_wrist.acc",
+    "necklace.acc", "right_arm.acc", "right_ear.acc", "right_foot.acc", 
+    "right_shin.acc", "right_shirt_pocket.acc", "right_shoulder.acc",
+    "right_thigh.acc", "right_wrist.acc"
+]
+
+sensor_positions_gyro = [
+    "back.gyro", "belt.gyro", "chest.gyro", "forehead.gyro",
+    "left_arm.gyro", "left_ear.gyro", "left_foot.gyro", "left_shin.gyro",
+    "left_shirt_pocket.gyro", "left_shoulder.gyro", "left_thigh.gyro", "left_wrist.gyro",
+    "necklace.gyro", "right_arm.gyro", "right_ear.gyro", "right_foot.gyro", 
+    "right_shin.gyro", "right_shirt_pocket.gyro", "right_shoulder.gyro",
+    "right_thigh.gyro", "right_wrist.gyro"
+]
+
+sensor_positions_acc_g = [
+    "back.acc_g", "belt.acc_g", "chest.acc_g", "forehead.acc_g",
+    "left_arm.acc_g", "left_ear.acc_g", "left_foot.acc_g", "left_shin.acc_g",
+    "left_shirt_pocket.acc_g", "left_shoulder.acc_g", "left_thigh.acc_g", "left_wrist.acc_g",
+    "necklace.acc_g", "right_arm.acc_g", "right_ear.acc_g", "right_foot.acc_g", 
+    "right_shin.acc_g", "right_shirt_pocket.acc_g", "right_shoulder.acc_g",
+    "right_thigh.acc_g", "right_wrist.acc_g"
+]
 
 combined_dataset = ConcatDataset(datasets)
 dataloader = DataLoader(combined_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
@@ -54,6 +80,16 @@ for batch in dataloader:
     full_Pose = pose.view(pose.shape[0], pose.shape[1], 24, 3)
     pose_with_angle = torch.cat([full_Pose, batch["pose_joint"].squeeze(2)], dim=-1)
     print("Pose Joint shape:", pose_with_angle.shape) 
+    # Stack data along the new axis (joints dimension)
+    combined_data_acc = torch.stack([batch[key] for key in sensor_positions_acc], dim=2)
+    combined_data_gyro = torch.stack([batch[key] for key in sensor_positions_gyro], dim=2)
+    combined_imu = torch.cat((combined_data_acc, combined_data_gyro), dim=3)
+
+    combined_data_acc_grav = torch.stack([batch[key] for key in sensor_positions_acc_g], dim=2)
+    combined_imu_grav =  torch.cat((combined_data_acc_grav, combined_data_gyro), dim=3)
+
+    print("imu_acc shape:", combined_imu.shape)  # Expected output: (batch, 800, 21, 3)
+    print("imu_acc_g shape:", combined_imu_grav.shape)
     break
 
 Embedding_size = 768
@@ -109,7 +145,7 @@ pose_data = torch.rand(batch_size, 25, Pose_joints, 6).to(device)
 imu_data = torch.rand(batch_size, 100, imu_positions, 6).to(device)
 imu_data_grav = torch.rand(batch_size, 100, imu_positions, 6).to(device)
 
-print(pose_data.shape)
+print(imu_data.shape)
 '''
 # Training loop
 epochs = 2000

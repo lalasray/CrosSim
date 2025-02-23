@@ -129,11 +129,27 @@ class IMUGraph:
         self.get_edge_index()
 
     def get_edge(self):
-        self.num_node = 20  # number of body joints/nodes
+        self.num_node = 21  # number of body joints/nodes
         self_link = [(i, i) for i in range(self.num_node)]
-        neighbor_link = [(1, 0), (2, 1), (3, 2), (4, 3), (5, 0), (6, 5), (7, 6), (8, 7),
-                         (9, 0), (10, 9), (11, 10), (12, 11), (13, 12), (14, 11), (15, 14), (16, 15),
-                         (17, 16), (18, 11), (19, 18)]
+        neighbor_link = [
+            # Back connections
+            (0, 1), (0, 2),  # back -> belt, chest
+            # Chest connections
+            (2, 3),  # chest -> forehead
+            (2, 4), (2, 5),  # chest -> left_arm, right_arm
+            # Arm connections
+            (4, 6), (5, 7),  # left_arm -> left_foot, right_arm -> right_foot
+            (4, 8), (5, 9),  # left_arm -> left_shoulder, right_arm -> right_shoulder
+            # Leg connections
+            (6, 10), (7, 11),  # left_foot -> left_shin, right_foot -> right_shin
+            (10, 12), (11, 13),  # left_shin -> left_shoulder, right_shin -> right_shoulder
+            # Shirt pocket and shoulders connections
+            (8, 14), (9, 15),  # left_shirt_pocket -> necklace, right_shirt_pocket -> necklace
+            # Thigh connections
+            (6, 16), (7, 17),  # left_thigh -> left_shin, right_thigh -> right_shin
+            # Wrist connections
+            (10, 18), (11, 19),  # left_wrist -> left_palm, right_wrist -> right_palm
+        ]
         self.edge = self_link + neighbor_link
         self.center = 0
 
