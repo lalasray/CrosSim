@@ -19,9 +19,9 @@ class EmbeddingEncoder(nn.Module):  # Inherit from nn.Module
 
         # Define the MLP encoder with two layers
         self.mlp_encoder = nn.Sequential(
-            nn.Linear(input_size, 512),   # Map from input size (768) to 512
+            nn.Linear(input_size, 768),   # Map from input size (768) to 512
             nn.ReLU(),                    # ReLU activation function
-            nn.Linear(512, output_size)   # Second layer to output the final size (512)
+            nn.Linear(768, output_size)   # Second layer to output the final size (512)
         )
 
         # Move the MLP encoder to the appropriate device (GPU if available)

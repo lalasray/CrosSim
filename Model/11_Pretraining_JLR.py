@@ -73,6 +73,7 @@ sensor_positions_acc_g = [
 
 combined_dataset = ConcatDataset(datasets)
 dataloader = DataLoader(combined_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
+'''
 for batch in dataloader:
     print("Batch keys:", batch.keys())
     print("Motion shape:", batch["motion"].squeeze(1).shape )
@@ -91,12 +92,12 @@ for batch in dataloader:
     print("imu_acc shape:", combined_imu.shape)  # Expected output: (batch, 800, 21, 3)
     print("imu_acc_g shape:", combined_imu_grav.shape)
     break
-
+'''
 Embedding_size = 768
 window = 1
 stride_size = 1
 Pose_joints = 24
-imu_positions = 20
+imu_positions = 21
 
 pose_graph = PoseGraph(max_hop=1, dilation=1)
 pose_edge_index = pose_graph.edge_index.to(device)  # Move to GPU
@@ -106,7 +107,7 @@ IMU_edge_index = IMU_graph.edge_index.to(device)  # Move to GPU
 class MultiModalJLR(nn.Module):
     def __init__(self):
         super(MultiModalJLR, self).__init__()
-        self.text_encoder = EmbeddingEncoder().to(device)
+        self.text_encoder = EmbeddingEncoder(output_size=Embedding_size).to(device)
         self.pose_encoder = GraphPoseEncoderPre(num_nodes=Pose_joints, feature_dim=6, hidden_dim=128, embedding_dim=64, window_size=window, stride=stride_size, output_dim=Embedding_size).to(device)
         self.imu_encoder = DeepConvGraphEncoderPre(num_nodes=imu_positions, feature_dim=6, hidden_dim=128, embedding_dim=64, window_size=window*4, stride=stride_size*4, output_dim=Embedding_size).to(device)
         self.imu_encoder_grav = DeepConvGraphEncoderPre(num_nodes=imu_positions, feature_dim=6, hidden_dim=128, embedding_dim=64, window_size=window*4, stride=stride_size*4, output_dim=Embedding_size).to(device)
@@ -138,43 +139,49 @@ scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0
 early_stopping_patience = 20
 best_loss = float('inf')
 stopping_counter = 0
-
-# Generate data and move to GPU
-text_data = torch.rand(batch_size, 768).to(device)
-pose_data = torch.rand(batch_size, 25, Pose_joints, 6).to(device)
-imu_data = torch.rand(batch_size, 100, imu_positions, 6).to(device)
-imu_data_grav = torch.rand(batch_size, 100, imu_positions, 6).to(device)
-
-print(imu_data.shape)
-'''
-# Training loop
 epochs = 2000
+
+# Training loop
+
 for epoch in range(epochs):
     model.train()
     optimizer.zero_grad()
+    for batch in dataloader:
+        
+        text_data = batch["motion"].squeeze(1)
+        
+        pose = torch.cat([batch["pose_trans"], batch["pose_body"]], dim=-1)
+        full_Pose = pose.view(pose.shape[0], pose.shape[1], 24, 3)
+        pose_data = torch.cat([full_Pose, batch["pose_joint"].squeeze(2)], dim=-1)
+        
+        combined_data_acc = torch.stack([batch[key] for key in sensor_positions_acc], dim=2)
+        combined_data_gyro = torch.stack([batch[key] for key in sensor_positions_gyro], dim=2)
+        imu_data = torch.cat((combined_data_acc, combined_data_gyro), dim=3)
+
+        combined_data_acc_grav = torch.stack([batch[key] for key in sensor_positions_acc_g], dim=2)
+        imu_data_grav =  torch.cat((combined_data_acc_grav, combined_data_gyro), dim=3)
+
+        text_embeddings, pose_embeddings, imu_embeddings, imu_emb_grav = model(text_data, pose_data, imu_data, imu_data_grav)
     
-    text_embeddings, pose_embeddings, imu_embeddings, imu_emb_grav = model(text_data, pose_data, imu_data, imu_data_grav)
+        total_loss = compute_total_loss(text_embeddings, pose_embeddings, imu_embeddings, imu_emb_grav)
+        total_loss.backward()
+        optimizer.step()
     
-    total_loss = compute_total_loss(text_embeddings, pose_embeddings, imu_embeddings, imu_emb_grav)
-    total_loss.backward()
-    optimizer.step()
+        # Scheduler step
+        scheduler.step(total_loss)
     
-    # Scheduler step
-    scheduler.step(total_loss)
+        if (epoch + 1) % 5 == 0:
+            print(f"Epoch [{epoch+1}/{epochs}], Loss: {total_loss.item()}")
     
-    if (epoch + 1) % 5 == 0:
-        print(f"Epoch [{epoch+1}/{epochs}], Loss: {total_loss.item()}")
-    
-    # Early stopping check
-    if total_loss.item() < best_loss:
-        best_loss = total_loss.item()
-        stopping_counter = 0
-    else:
-        stopping_counter += 1
-        if stopping_counter >= early_stopping_patience:
-            print("Early stopping triggered. Training stopped.")
-            break
+        # Early stopping check
+        if total_loss.item() < best_loss:
+            best_loss = total_loss.item()
+            stopping_counter = 0
+        else:
+            stopping_counter += 1
+            if stopping_counter >= early_stopping_patience:
+                print("Early stopping triggered. Training stopped.")
+                break
 
 # Save model
 torch.save(model.state_dict(), 'multimodal_jlr_model.pth')
-'''
