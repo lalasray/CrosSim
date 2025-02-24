@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader, ConcatDataset
 # Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-batch_size = 32
+batch_size = 256
 
 
 data_dir = "/home/lala/Documents/GitHub/CrosSim/CrosSim_Data/UniMocap/processed"  # Update path
@@ -73,27 +73,8 @@ sensor_positions_acc_g = [
 
 combined_dataset = ConcatDataset(datasets)
 dataloader = DataLoader(combined_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
-'''
-for batch in dataloader:
-    print("Batch keys:", batch.keys())
-    print("Motion shape:", batch["motion"].squeeze(1).shape )
-    pose = torch.cat([batch["pose_trans"], batch["pose_body"]], dim=-1)
-    full_Pose = pose.view(pose.shape[0], pose.shape[1], 24, 3)
-    pose_with_angle = torch.cat([full_Pose, batch["pose_joint"].squeeze(2)], dim=-1)
-    print("Pose Joint shape:", pose_with_angle.shape) 
-    # Stack data along the new axis (joints dimension)
-    combined_data_acc = torch.stack([batch[key] for key in sensor_positions_acc], dim=2)
-    combined_data_gyro = torch.stack([batch[key] for key in sensor_positions_gyro], dim=2)
-    combined_imu = torch.cat((combined_data_acc, combined_data_gyro), dim=3)
 
-    combined_data_acc_grav = torch.stack([batch[key] for key in sensor_positions_acc_g], dim=2)
-    combined_imu_grav =  torch.cat((combined_data_acc_grav, combined_data_gyro), dim=3)
-
-    print("imu_acc shape:", combined_imu.shape)  # Expected output: (batch, 800, 21, 3)
-    print("imu_acc_g shape:", combined_imu_grav.shape)
-    break
-'''
-Embedding_size = 768
+Embedding_size = 256
 window = 1
 stride_size = 1
 Pose_joints = 24
@@ -136,10 +117,7 @@ optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-4)
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=10, verbose=True)
 
 # Early stopping parameters
-early_stopping_patience = 200
-best_loss = float('inf')
-stopping_counter = 0
-epochs = 2000
+epochs = 100
 
 # Training loop
 
@@ -157,9 +135,11 @@ for epoch in range(epochs):
         combined_data_acc = torch.stack([batch[key] for key in sensor_positions_acc], dim=2)
         combined_data_gyro = torch.stack([batch[key] for key in sensor_positions_gyro], dim=2)
         imu_data = torch.cat((combined_data_acc, combined_data_gyro), dim=3)
+        #imu_data = combined_data_acc
 
         combined_data_acc_grav = torch.stack([batch[key] for key in sensor_positions_acc_g], dim=2)
         imu_data_grav =  torch.cat((combined_data_acc_grav, combined_data_gyro), dim=3)
+        #imu_data_grav = combined_data_acc_grav
 
         text_embeddings, pose_embeddings, imu_embeddings, imu_emb_grav = model(text_data, pose_data, imu_data, imu_data_grav)
     
@@ -172,16 +152,6 @@ for epoch in range(epochs):
     
         if (epoch + 1) % 2 == 0:
             print(f"Epoch [{epoch+1}/{epochs}], Loss: {total_loss.item()}")
-    
-        # Early stopping check
-        if total_loss.item() < best_loss:
-            best_loss = total_loss.item()
-            stopping_counter = 0
-        else:
-            stopping_counter += 1
-            if stopping_counter >= early_stopping_patience:
-                print("Early stopping triggered. Training stopped.")
-                break
 
 # Save model
 torch.save(model.state_dict(), 'multimodal_jlr_model.pth')
