@@ -13,11 +13,12 @@ from torch.utils.data import DataLoader, ConcatDataset
 # Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-batch_size = 256
+batch_size = 8
 
 
 data_dir = "/home/lala/Documents/GitHub/CrosSim/CrosSim_Data/UniMocap/processed"  # Update path
 OGdataset = OGMotionDataset(data_dir)
+'''
 openpack = MotionDataset(data_dir, "openpack")
 alshar = MotionDataset(data_dir, "alshar")
 opportunity = MotionDataset(data_dir, "opportunity")
@@ -38,12 +39,13 @@ mmact = MotionDataset(data_dir, "mmact")
 mmfit = MotionDataset(data_dir, "mmfit")
 dip = MotionDataset(data_dir, "dip")
 totalcapture = MotionDataset(data_dir, "totalcapture")
-
 datasets = [
     OGdataset, openpack, alshar, opportunity, utdmhad, ucihar, wHAR, shoaib,
     har70, realworld, pamap2, uschad, mhealth, harth, wharf, wisdm, dsads,
     mmact, mmfit, dip, totalcapture
 ]
+'''
+dataloader = DataLoader(OGdataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
 sensor_positions_acc = [
     "back.acc", "belt.acc", "chest.acc", "forehead.acc",
     "left_arm.acc", "left_ear.acc", "left_foot.acc", "left_shin.acc",
@@ -71,8 +73,8 @@ sensor_positions_acc_g = [
     "right_thigh.acc_g", "right_wrist.acc_g"
 ]
 
-combined_dataset = ConcatDataset(datasets)
-dataloader = DataLoader(combined_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
+#combined_dataset = ConcatDataset(datasets)
+#dataloader = DataLoader(combined_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
 
 Embedding_size = 256
 window = 1
@@ -150,8 +152,7 @@ for epoch in range(epochs):
         # Scheduler step
         scheduler.step(total_loss)
     
-        if (epoch + 1) % 2 == 0:
-            print(f"Epoch [{epoch+1}/{epochs}], Loss: {total_loss.item()}")
+    print(f"Epoch [{epoch+1}/{epochs}], Loss: {total_loss.item()}")
 
 # Save model
 torch.save(model.state_dict(), 'multimodal_jlr_model.pth')
