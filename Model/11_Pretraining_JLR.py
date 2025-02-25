@@ -1,22 +1,29 @@
 import torch
 import torch.nn as nn
+import torch.optim as optim
+from tqdm import tqdm  # Import tqdm for progress bar
+
 from Encoder.Multi_IMU_Encoder import DeepConvGraphEncoderPre, IMUGraph
 from Encoder.Gtr_Text_Encoder import EmbeddingEncoder
-from Encoder.Single_IMU_Encoder import IMUSingleNodeEncoderWithClass
 from Encoder.Pose_Encoder import GraphPoseEncoderPre, PoseGraph
 from Loss.pretrain_loss import predefined_infonce
-import torch.optim as optim
-from dataloader_var import MotionDataset,OGMotionDataset,collate_fn
-from torch.utils.data import DataLoader, ConcatDataset
-
+from dataloader_var import MotionDataset, OGMotionDataset, collate_fn
+from torch.utils.data import DataLoader
 
 # Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+# Hyperparameters
 batch_size = 8
+epochs = 100
+Embedding_size = 256
+window = 1
+stride_size = 1
+Pose_joints = 24
+imu_positions = 21
 
-
-data_dir = "/home/lala/Documents/GitHub/CrosSim/CrosSim_Data/UniMocap/processed"  # Update path
+# Load Dataset
+data_dir = "/home/lala/Documents/GitHub/CrosSim/CrosSim_Data/UniMocap/processed"
 OGdataset = OGMotionDataset(data_dir)
 '''
 openpack = MotionDataset(data_dir, "openpack")
@@ -46,63 +53,49 @@ datasets = [
 ]
 '''
 dataloader = DataLoader(OGdataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
-sensor_positions_acc = [
-    "back.acc", "belt.acc", "chest.acc", "forehead.acc",
-    "left_arm.acc", "left_ear.acc", "left_foot.acc", "left_shin.acc",
-    "left_shirt_pocket.acc", "left_shoulder.acc", "left_thigh.acc", "left_wrist.acc",
-    "necklace.acc", "right_arm.acc", "right_ear.acc", "right_foot.acc", 
-    "right_shin.acc", "right_shirt_pocket.acc", "right_shoulder.acc",
-    "right_thigh.acc", "right_wrist.acc"
-]
-
-sensor_positions_gyro = [
-    "back.gyro", "belt.gyro", "chest.gyro", "forehead.gyro",
-    "left_arm.gyro", "left_ear.gyro", "left_foot.gyro", "left_shin.gyro",
-    "left_shirt_pocket.gyro", "left_shoulder.gyro", "left_thigh.gyro", "left_wrist.gyro",
-    "necklace.gyro", "right_arm.gyro", "right_ear.gyro", "right_foot.gyro", 
-    "right_shin.gyro", "right_shirt_pocket.gyro", "right_shoulder.gyro",
-    "right_thigh.gyro", "right_wrist.gyro"
-]
-
-sensor_positions_acc_g = [
-    "back.acc_g", "belt.acc_g", "chest.acc_g", "forehead.acc_g",
-    "left_arm.acc_g", "left_ear.acc_g", "left_foot.acc_g", "left_shin.acc_g",
-    "left_shirt_pocket.acc_g", "left_shoulder.acc_g", "left_thigh.acc_g", "left_wrist.acc_g",
-    "necklace.acc_g", "right_arm.acc_g", "right_ear.acc_g", "right_foot.acc_g", 
-    "right_shin.acc_g", "right_shirt_pocket.acc_g", "right_shoulder.acc_g",
-    "right_thigh.acc_g", "right_wrist.acc_g"
-]
-
 #combined_dataset = ConcatDataset(datasets)
 #dataloader = DataLoader(combined_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
 
-Embedding_size = 256
-window = 1
-stride_size = 1
-Pose_joints = 24
-imu_positions = 21
+# Sensor Positions
+sensor_positions_acc = ["back.acc", "belt.acc", "chest.acc", "forehead.acc",
+                        "left_arm.acc", "left_ear.acc", "left_foot.acc", "left_shin.acc",
+                        "left_shirt_pocket.acc", "left_shoulder.acc", "left_thigh.acc", "left_wrist.acc",
+                        "necklace.acc", "right_arm.acc", "right_ear.acc", "right_foot.acc",
+                        "right_shin.acc", "right_shirt_pocket.acc", "right_shoulder.acc",
+                        "right_thigh.acc", "right_wrist.acc"]
 
+sensor_positions_gyro = [pos.replace(".acc", ".gyro") for pos in sensor_positions_acc]
+sensor_positions_acc_g = [pos + "_g" for pos in sensor_positions_acc]
+
+# Graph Initialization
 pose_graph = PoseGraph(max_hop=1, dilation=1)
-pose_edge_index = pose_graph.edge_index.to(device)  # Move to GPU
+pose_edge_index = pose_graph.edge_index.to(device)
 IMU_graph = IMUGraph(max_hop=1, dilation=1)
-IMU_edge_index = IMU_graph.edge_index.to(device)  # Move to GPU
+IMU_edge_index = IMU_graph.edge_index.to(device)
 
+# Define MultiModal Model
 class MultiModalJLR(nn.Module):
     def __init__(self):
         super(MultiModalJLR, self).__init__()
         self.text_encoder = EmbeddingEncoder(output_size=Embedding_size).to(device)
-        self.pose_encoder = GraphPoseEncoderPre(num_nodes=Pose_joints, feature_dim=6, hidden_dim=128, embedding_dim=64, window_size=window, stride=stride_size, output_dim=Embedding_size).to(device)
-        self.imu_encoder = DeepConvGraphEncoderPre(num_nodes=imu_positions, feature_dim=6, hidden_dim=128, embedding_dim=64, window_size=window*4, stride=stride_size*4, output_dim=Embedding_size).to(device)
-        self.imu_encoder_grav = DeepConvGraphEncoderPre(num_nodes=imu_positions, feature_dim=6, hidden_dim=128, embedding_dim=64, window_size=window*4, stride=stride_size*4, output_dim=Embedding_size).to(device)
+        self.pose_encoder = GraphPoseEncoderPre(num_nodes=Pose_joints, feature_dim=6, hidden_dim=128,
+                                                embedding_dim=64, window_size=window, stride=stride_size,
+                                                output_dim=Embedding_size).to(device)
+        self.imu_encoder = DeepConvGraphEncoderPre(num_nodes=imu_positions, feature_dim=6, hidden_dim=128,
+                                                   embedding_dim=64, window_size=window*4, stride=stride_size*4,
+                                                   output_dim=Embedding_size).to(device)
+        self.imu_encoder_grav = DeepConvGraphEncoderPre(num_nodes=imu_positions, feature_dim=6, hidden_dim=128,
+                                                        embedding_dim=64, window_size=window*4, stride=stride_size*4,
+                                                        output_dim=Embedding_size).to(device)
 
     def forward(self, text, pose, imu, imu_grav):
         text_embeddings = self.text_encoder(text)
         pose_embeddings = self.pose_encoder(pose, pose_edge_index)
         imu_embeddings = self.imu_encoder(imu, IMU_edge_index)
         imu_embeddings_grav = self.imu_encoder_grav(imu_grav, IMU_edge_index)
-        
         return text_embeddings, pose_embeddings, imu_embeddings, imu_embeddings_grav
 
+# Loss Computation Function
 def compute_total_loss(text_embeddings, pose_embeddings, imu_embeddings, imu_embeddings_grav):
     loss_text_pose = predefined_infonce(text_embeddings, pose_embeddings)
     loss_text_imu = predefined_infonce(text_embeddings, imu_embeddings)
@@ -113,46 +106,55 @@ def compute_total_loss(text_embeddings, pose_embeddings, imu_embeddings, imu_emb
     total_loss = (loss_text_pose + loss_text_imu + loss_pose_imu + loss_text_single_imu + loss_imu_single_imu) / 5
     return total_loss
 
-# Initialize model and optimizer
+# Initialize Model, Optimizer, and Scheduler
 model = MultiModalJLR().to(device)
 optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-4)
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=10, verbose=True)
 
-# Early stopping parameters
-epochs = 100
-
-# Training loop
-
+# Training Loop with Progress Bar
 for epoch in range(epochs):
     model.train()
-    optimizer.zero_grad()
-    for batch in dataloader:
+    epoch_loss = 0
+    progress_bar = tqdm(dataloader, desc=f"Epoch {epoch+1}/{epochs}", unit="batch")  # Initialize tqdm
+    
+    for batch_idx, batch in enumerate(progress_bar):
+        optimizer.zero_grad()
         
+        # Prepare Data
         text_data = batch["motion"].squeeze(1)
-        
         pose = torch.cat([batch["pose_trans"], batch["pose_body"]], dim=-1)
         full_Pose = pose.view(pose.shape[0], pose.shape[1], 24, 3)
         pose_data = torch.cat([full_Pose, batch["pose_joint"].squeeze(2)], dim=-1)
-        
+
         combined_data_acc = torch.stack([batch[key] for key in sensor_positions_acc], dim=2)
         combined_data_gyro = torch.stack([batch[key] for key in sensor_positions_gyro], dim=2)
         imu_data = torch.cat((combined_data_acc, combined_data_gyro), dim=3)
-        #imu_data = combined_data_acc
 
         combined_data_acc_grav = torch.stack([batch[key] for key in sensor_positions_acc_g], dim=2)
-        imu_data_grav =  torch.cat((combined_data_acc_grav, combined_data_gyro), dim=3)
-        #imu_data_grav = combined_data_acc_grav
+        imu_data_grav = torch.cat((combined_data_acc_grav, combined_data_gyro), dim=3)
 
-        text_embeddings, pose_embeddings, imu_embeddings, imu_emb_grav = model(text_data, pose_data, imu_data, imu_data_grav)
-    
+        # Forward Pass
+        text_embeddings, pose_embeddings, imu_embeddings, imu_emb_grav = model(
+            text_data, pose_data, imu_data, imu_data_grav
+        )
+
+        # Compute Loss
         total_loss = compute_total_loss(text_embeddings, pose_embeddings, imu_embeddings, imu_emb_grav)
         total_loss.backward()
         optimizer.step()
-    
-        # Scheduler step
-        scheduler.step(total_loss)
-    
-    print(f"Epoch [{epoch+1}/{epochs}], Loss: {total_loss.item()}")
 
-# Save model
+        # Update Progress Bar
+        batch_loss = total_loss.item()
+        epoch_loss += batch_loss
+        progress_bar.set_postfix({"Batch Loss": batch_loss})  # Show batch loss in tqdm
+
+    # Compute average loss per epoch
+    avg_loss = epoch_loss / len(dataloader)
+    print(f"Epoch [{epoch+1}/{epochs}], Avg Loss: {avg_loss:.4f}")
+
+    # Adjust learning rate if using ReduceLROnPlateau
+    scheduler.step(avg_loss if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau) else None)
+
+# Save Model
 torch.save(model.state_dict(), 'multimodal_jlr_model.pth')
+print("Training complete! Model saved as 'multimodal_jlr_model.pth'.")
