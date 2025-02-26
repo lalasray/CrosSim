@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch_geometric.nn import GCNConv
+from torch_geometric.nn import GCNConv,GATv2Conv
 import numpy as np
 
 class TemporalAttention(nn.Module):
@@ -15,6 +15,58 @@ class TemporalAttention(nn.Module):
         x_weighted = (x * weights).sum(dim=1)  # [batch_size, input_dim]
         return self.output_layer(x_weighted)  # [batch_size, output_dim]
 
+class GATPoseGraphEncoder(nn.Module):
+    def __init__(self, num_nodes, feature_dim, hidden_dim, output_dim=512, window_size=1, stride=1, heads=4):
+        super(GATPoseGraphEncoder, self).__init__()
+        self.window_size = window_size
+        self.stride = stride
+        self.num_nodes = num_nodes
+        self.hidden_dim = hidden_dim
+        self.output_dim = output_dim
+
+        # Graph Attention Layers (GATConv)
+        self.conv1 = GATv2Conv(feature_dim, 4, heads=heads, concat=True)
+        self.conv2 = GATv2Conv(4 * heads, 16, heads=heads, concat=True)
+        self.conv3 = GATv2Conv(16 * heads, hidden_dim, heads=1, concat=False)  # Last layer has 1 head
+
+        # Fully connected layers (initialized dynamically)
+        self.fc1 = None
+        self.fc2 = None
+
+    def forward(self, data, edge_index):
+        batch_size, time_steps, num_nodes, feature_dim = data.shape
+        embeddings = []
+        
+        num_windows = (time_steps - self.window_size) // self.stride + 1  # Calculate number of windows dynamically
+
+        for i in range(0, time_steps - self.window_size + 1, self.stride):
+            window = data[:, i:i+self.window_size, :, :].reshape(batch_size * self.window_size, num_nodes, feature_dim)
+            outputs = []
+            for batch_idx in range(window.shape[0]):  # Process each sample separately
+                x = window[batch_idx]  # Shape: (num_nodes, feature_dim)
+                x = F.relu(self.conv1(x, edge_index))
+                x = F.relu(self.conv2(x, edge_index))
+                x = F.relu(self.conv3(x, edge_index))
+                outputs.append(x)
+            
+            x = torch.stack(outputs)  # Shape: (batch_size * window_size, num_nodes, hidden_dim)
+            x = x.view(batch_size, self.window_size, self.num_nodes, -1).mean(dim=2)  # Mean over nodes
+            embeddings.append(x)
+        
+        embeddings = torch.stack(embeddings, dim=1)  # Shape: (batch_size, num_windows, hidden_dim)
+        embeddings = embeddings.view(embeddings.shape[0], -1)  # Flatten time steps
+        
+        # Dynamically initialize FC layers based on the computed embedding dimension
+        if self.fc1 is None or self.fc2 is None:
+            input_dim = embeddings.shape[1]  # Dynamically determine the input size
+            self.fc1 = nn.Linear(input_dim, num_windows).to(embeddings.device)  # Reduce by half dynamically
+            self.fc2 = nn.Linear(num_windows, self.output_dim).to(embeddings.device)  # Map to output_dim
+        
+        embeddings = self.fc1(embeddings)  
+        embeddings = self.fc2(embeddings)  
+
+        return embeddings
+    
 class GraphPoseEncoderPre(nn.Module):
     def __init__(self, num_nodes, feature_dim, hidden_dim, embedding_dim, window_size=1, stride=1, output_dim=512):
         super(GraphPoseEncoderPre, self).__init__()
@@ -206,7 +258,7 @@ def main():
     graph = PoseGraph(max_hop=1, dilation=1)
     edge_index = graph.edge_index
 
-    encoder = GraphPoseEncoderPre(num_nodes=24, feature_dim=6, hidden_dim=128, embedding_dim=64, window_size=1, stride=1)
+    encoder = GATPoseGraphEncoder(num_nodes=24, feature_dim=6, hidden_dim=128, window_size=1, stride=1)
 
     # Sample input: (batch_size=16, time_steps=25, num_nodes=24, feature_dim=3)
     sample_input = torch.randn(16, 25, 24, 6)
