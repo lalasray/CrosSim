@@ -1,4 +1,5 @@
 import torch
+torch.multiprocessing.set_start_method('spawn')
 import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm  # Import tqdm for progress bar
@@ -9,6 +10,7 @@ from Encoder.Pose_Encoder import GraphPoseEncoderPre, PoseGraph
 from Loss.pretrain_loss import predefined_infonce
 from dataloader_var import MotionDataset, OGMotionDataset, collate_fn
 from torch.utils.data import DataLoader
+#
 
 # Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -52,7 +54,7 @@ datasets = [
     mmact, mmfit, dip, totalcapture
 ]
 '''
-dataloader = DataLoader(OGdataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
+dataloader = DataLoader(OGdataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)#, num_workers = 4)# * torch.cuda.device_count())
 #combined_dataset = ConcatDataset(datasets)
 #dataloader = DataLoader(combined_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
 
@@ -119,19 +121,19 @@ for epoch in range(epochs):
     
     for batch_idx, batch in enumerate(progress_bar):
         optimizer.zero_grad()
-        
+        #batch = batch.to(device)
         # Prepare Data
-        text_data = batch["motion"].squeeze(1)
+        text_data = batch["motion"].squeeze(1).to(device)
         pose = torch.cat([batch["pose_trans"], batch["pose_body"]], dim=-1)
         full_Pose = pose.view(pose.shape[0], pose.shape[1], 24, 3)
-        pose_data = torch.cat([full_Pose, batch["pose_joint"].squeeze(2)], dim=-1)
+        pose_data = torch.cat([full_Pose, batch["pose_joint"].squeeze(2)], dim=-1).to(device)
 
         combined_data_acc = torch.stack([batch[key] for key in sensor_positions_acc], dim=2)
         combined_data_gyro = torch.stack([batch[key] for key in sensor_positions_gyro], dim=2)
-        imu_data = torch.cat((combined_data_acc, combined_data_gyro), dim=3)
+        imu_data = torch.cat((combined_data_acc, combined_data_gyro), dim=3).to(device)
 
         combined_data_acc_grav = torch.stack([batch[key] for key in sensor_positions_acc_g], dim=2)
-        imu_data_grav = torch.cat((combined_data_acc_grav, combined_data_gyro), dim=3)
+        imu_data_grav = torch.cat((combined_data_acc_grav, combined_data_gyro), dim=3).to(device)
 
         # Forward Pass
         text_embeddings, pose_embeddings, imu_embeddings, imu_emb_grav = model(

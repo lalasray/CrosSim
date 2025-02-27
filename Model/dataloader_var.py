@@ -1,6 +1,7 @@
 import torch
 from torch.utils.data import Dataset, DataLoader, ConcatDataset
 import os
+import time
 
 # Define dataset-specific IMU sensor placements
 dataset_sensors = {
@@ -94,6 +95,7 @@ class OGMotionDataset(Dataset):
     
     def __getitem__(self, idx):
         """Load and return one data sample."""
+        t1 = time.time()
         file_path = os.path.join(self.data_dir, self.file_list[idx])
         data = torch.load(file_path, map_location="cpu")  # Load directly on CPU
         
@@ -117,13 +119,13 @@ class OGMotionDataset(Dataset):
             "pose_trans": trans,
             **imu_tensors
         }
-        
+
         return sample
 
 def collate_fn(batch):
     """Custom collate function to handle variable-length tensors."""
     batch_dict = {}
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    #device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     for key in batch[0]:
         tensors = [item[key] for item in batch if item[key] is not None]
@@ -137,14 +139,14 @@ def collate_fn(batch):
                 pad_size = [p for pair in reversed(pad_size) for p in pair]
                 padded_tensors.append(torch.nn.functional.pad(t, pad_size))
 
-            batch_dict[key] = torch.stack(padded_tensors).to(device, non_blocking=True)
+            batch_dict[key] = torch.stack(padded_tensors)#.to(device, non_blocking=True)
         else:
             batch_dict[key] = None
 
     return batch_dict
 def main():
     # Example Usage
-    data_dir = "/home/lala/Documents/GitHub/CrosSim_Data/UniMocap/processed/"  # Update path
+    data_dir = "/home/lala/Documents/GitHub/CrosSim/CrosSim_Data/UniMocap/processed"  # Update path
     OGdataset = OGMotionDataset(data_dir)
     openpack = MotionDataset(data_dir, "openpack")
     alshar = MotionDataset(data_dir, "alshar")
@@ -176,10 +178,15 @@ def main():
     combined_dataset = ConcatDataset(datasets)
     # Combine datasets using ConcatDataset
     #combined_dataset = ConcatDataset(datasets)
-    dataloader = DataLoader(combined_dataset, batch_size=4, shuffle=True, collate_fn=collate_fn)
+    
+    dataloader = DataLoader(combined_dataset, batch_size=128, shuffle=True, collate_fn=collate_fn, num_workers=8)
+    t1 = time.time()
     for batch in dataloader:
-        print(batch)
-        break
+        x = batch
+        t2 = time.time()
+        print(f"{(t2-t1):.50f}")
+        t1 = t2
+        
 
 
 if __name__ == "__main__":
