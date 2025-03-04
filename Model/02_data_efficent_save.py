@@ -19,14 +19,6 @@ sensor_positions_acc = ["back.acc", "belt.acc", "chest.acc", "forehead.acc",
 sensor_positions_gyro = [pos.replace(".acc", ".gyro") for pos in sensor_positions_acc]
 sensor_positions_acc_g = [pos + "_g" for pos in sensor_positions_acc]
 
-# Storage for processed samples
-processed_samples = {
-    "text_data": [],
-    "pose_data": [],
-    "imu_data": [],
-    "imu_data_grav": []
-}
-
 # Get list of all .pt files
 file_list = [f for f in os.listdir(data_dir) if f.endswith(".pt")]
 
@@ -66,11 +58,15 @@ with h5py.File(save_path, "a") as f:
             combined_data_acc_grav = torch.stack([imu_tensors[key] for key in sensor_positions_acc_g])
             imu_data_grav = torch.cat((combined_data_acc_grav, combined_data_gyro), dim=2)
 
-            # Save the processed data directly to HDF5
-            f.create_dataset(f"text_data_{file_name}", data=text_data.numpy(), compression="gzip")
-            f.create_dataset(f"pose_data_{file_name}", data=pose_data.numpy(), compression="gzip")
-            f.create_dataset(f"imu_data_{file_name}", data=imu_data.numpy(), compression="gzip")
-            f.create_dataset(f"imu_data_grav_{file_name}", data=imu_data_grav.numpy(), compression="gzip")
+            # Create a group in the HDF5 file for this specific data point (per file)
+            group_name = f"data_{file_name.replace('.pt', '')}"
+            group = f.create_group(group_name)
+
+            # Save all the processed data within the group
+            group.create_dataset("text_data", data=text_data.numpy(), compression="gzip")
+            group.create_dataset("pose_data", data=pose_data.numpy(), compression="gzip")
+            group.create_dataset("imu_data", data=imu_data.numpy(), compression="gzip")
+            group.create_dataset("imu_data_grav", data=imu_data_grav.numpy(), compression="gzip")
         except KeyError as e:
             print(f"Skipping file {file_name} due to missing key: {e}")
 

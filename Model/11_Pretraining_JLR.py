@@ -8,9 +8,8 @@ from Encoder.Multi_IMU_Encoder import DeepConvGraphEncoderPre, IMUGraph
 from Encoder.Gtr_Text_Encoder import EmbeddingEncoder
 from Encoder.Pose_Encoder import GraphPoseEncoderPre, PoseGraph
 from Loss.pretrain_loss import predefined_infonce
-from dataloader_var import MotionDataset, OGMotionDataset, collate_fn
-from torch.utils.data import DataLoader
-#
+from c_dataloader import MotionDataset, collate_fn
+from torch.utils.data import Dataset, DataLoader, ConcatDataset
 
 # Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -26,7 +25,6 @@ imu_positions = 21
 
 # Load Dataset
 data_dir = "/home/lala/Documents/GitHub/CrosSim/CrosSim_Data/UniMocap/processed"
-OGdataset = OGMotionDataset(data_dir)
 '''
 openpack = MotionDataset(data_dir, "openpack")
 alshar = MotionDataset(data_dir, "alshar")
@@ -54,20 +52,12 @@ datasets = [
     mmact, mmfit, dip, totalcapture
 ]
 '''
-dataloader = DataLoader(OGdataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)#, num_workers = 4)# * torch.cuda.device_count())
+dataloader = DataLoader(MotionDataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn, num_workers = 4)
 #combined_dataset = ConcatDataset(datasets)
 #dataloader = DataLoader(combined_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
 
 # Sensor Positions
-sensor_positions_acc = ["back.acc", "belt.acc", "chest.acc", "forehead.acc",
-                        "left_arm.acc", "left_ear.acc", "left_foot.acc", "left_shin.acc",
-                        "left_shirt_pocket.acc", "left_shoulder.acc", "left_thigh.acc", "left_wrist.acc",
-                        "necklace.acc", "right_arm.acc", "right_ear.acc", "right_foot.acc",
-                        "right_shin.acc", "right_shirt_pocket.acc", "right_shoulder.acc",
-                        "right_thigh.acc", "right_wrist.acc"]
-
-sensor_positions_gyro = [pos.replace(".acc", ".gyro") for pos in sensor_positions_acc]
-sensor_positions_acc_g = [pos + "_g" for pos in sensor_positions_acc]
+#sensor_positions_acc = ["back.acc", "belt.acc", "chest.acc", "forehead.acc", "left_arm.acc", "left_ear.acc", "left_foot.acc", "left_shin.acc", "left_shirt_pocket.acc", "left_shoulder.acc", "left_thigh.acc", "left_wrist.acc", "necklace.acc", "right_arm.acc", "right_ear.acc", "right_foot.acc", "right_shin.acc", "right_shirt_pocket.acc", "right_shoulder.acc", "right_thigh.acc", "right_wrist.acc"]
 
 # Graph Initialization
 pose_graph = PoseGraph(max_hop=1, dilation=1)
@@ -121,20 +111,12 @@ for epoch in range(epochs):
     
     for batch_idx, batch in enumerate(progress_bar):
         optimizer.zero_grad()
-        #batch = batch.to(device)
         # Prepare Data
         text_data = batch["motion"].squeeze(1).to(device)
-        pose = torch.cat([batch["pose_trans"], batch["pose_body"]], dim=-1)
-        full_Pose = pose.view(pose.shape[0], pose.shape[1], 24, 3)
-        pose_data = torch.cat([full_Pose, batch["pose_joint"].squeeze(2)], dim=-1).to(device)
-
-        combined_data_acc = torch.stack([batch[key] for key in sensor_positions_acc], dim=2)
-        combined_data_gyro = torch.stack([batch[key] for key in sensor_positions_gyro], dim=2)
-        imu_data = torch.cat((combined_data_acc, combined_data_gyro), dim=3).to(device)
-
-        combined_data_acc_grav = torch.stack([batch[key] for key in sensor_positions_acc_g], dim=2)
-        imu_data_grav = torch.cat((combined_data_acc_grav, combined_data_gyro), dim=3).to(device)
-
+        pose_data = batch["motion"].squeeze(1).to(device)
+        imu_data = batch["motion"].squeeze(1).to(device)
+        imu_data_grav = batch["motion"].squeeze(1).to(device)
+        
         # Forward Pass
         text_embeddings, pose_embeddings, imu_embeddings, imu_emb_grav = model(
             text_data, pose_data, imu_data, imu_data_grav
