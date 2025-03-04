@@ -147,7 +147,6 @@ def collate_fn(batch):
 def main():
     # Example Usage
     data_dir = "/home/lala/Documents/GitHub/CrosSim/CrosSim_Data/UniMocap/processed"  # Update path
-    OGdataset = OGMotionDataset(data_dir)
     openpack = MotionDataset(data_dir, "openpack")
     alshar = MotionDataset(data_dir, "alshar")
     opportunity = MotionDataset(data_dir, "opportunity")
@@ -170,7 +169,7 @@ def main():
     totalcapture = MotionDataset(data_dir, "totalcapture")
 
     datasets = [
-        OGdataset, openpack, alshar, opportunity, utdmhad, ucihar, wHAR, shoaib,
+        openpack, alshar, opportunity, utdmhad, ucihar, wHAR, shoaib,
         har70, realworld, pamap2, uschad, mhealth, harth, wharf, wisdm, dsads,
         mmact, mmfit, dip, totalcapture
     ]

@@ -2,6 +2,17 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 import os
 
+
+sensor_positions_acc = ["back.acc", "belt.acc", "chest.acc", "forehead.acc",
+                        "left_arm.acc", "left_ear.acc", "left_foot.acc", "left_shin.acc",
+                        "left_shirt_pocket.acc", "left_shoulder.acc", "left_thigh.acc", "left_wrist.acc",
+                        "necklace.acc", "right_arm.acc", "right_ear.acc", "right_foot.acc",
+                        "right_shin.acc", "right_shirt_pocket.acc", "right_shoulder.acc",
+                        "right_thigh.acc", "right_wrist.acc"]
+
+sensor_positions_gyro = [pos.replace(".acc", ".gyro") for pos in sensor_positions_acc]
+sensor_positions_acc_g = [pos + "_g" for pos in sensor_positions_acc]
+
 class MotionDataset(Dataset):
     def __init__(self, data_dir):
         """Initialize dataset by listing all .pt files in the directory."""
@@ -65,13 +76,22 @@ def collate_fn(batch):
     return batch_dict
 
 # Example usage
-data_dir = "/home/lala/Documents/GitHub/CrosSim_Data/UniMocap/processed/"  # Update this path
+data_dir = "../CrosSim_Data/UniMocap/processed"  # Update this path
 dataset = MotionDataset(data_dir)
-dataloader = DataLoader(dataset, batch_size=4, shuffle=True, collate_fn=collate_fn)
+dataloader = DataLoader(dataset, batch_size=128, shuffle=False, collate_fn=collate_fn)
 
 # Iterate through the DataLoader
 for batch in dataloader:
-    print("Batch keys:", batch.keys())
-    print("Motion shape:", batch["motion"].shape if batch["motion"] is not None else "None")
-    print("Pose Joint shape:", batch["pose_joint"].shape if batch["pose_joint"] is not None else "None")
-    #break
+
+    text_data = batch["motion"].squeeze(1)
+    pose = torch.cat([batch["pose_trans"], batch["pose_body"]], dim=-1)
+    full_Pose = pose.view(pose.shape[0], pose.shape[1], 24, 3)
+    pose_data = torch.cat([full_Pose, batch["pose_joint"].squeeze(2)], dim=-1)
+
+    combined_data_acc = torch.stack([batch[key] for key in sensor_positions_acc], dim=2)
+    combined_data_gyro = torch.stack([batch[key] for key in sensor_positions_gyro], dim=2)
+    imu_data = torch.cat((combined_data_acc, combined_data_gyro), dim=3)
+
+    combined_data_acc_grav = torch.stack([batch[key] for key in sensor_positions_acc_g], dim=2)
+    imu_data_grav = torch.cat((combined_data_acc_grav, combined_data_gyro), dim=3)
+    print(text_data.shape)
