@@ -25,7 +25,7 @@ h5_file_path = "../CrosSim_Data/UniMocap/full_dataset.h5"
 
 # Instantiate the dataset
 dataset = UniMocapDataset(h5_file_path)
-dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
+dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn, num_workers=8, pin_memory=True)
 
 # Define MultiModal Model
 class MultiModalJLR(nn.Module):
@@ -65,9 +65,20 @@ def compute_total_loss(text_embeddings, pose_embeddings, imu_embeddings, imu_emb
     return total_loss
 
 # Initialize Model, Optimizer, and Scheduler
-model = MultiModalJLR().to(device)
+model = torch.compile(MultiModalJLR().to(device))
 optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-4)
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=10, verbose=True)
+scaler = torch.cuda.amp.GradScaler()
+torch.backends.cudnn.benchmark = True
+
+# Dynamic max_norm settings
+base_max_norm = 5.0  # Initial value
+min_max_norm = 1.0   # Lower bound
+max_max_norm = 10.0  # Upper bound
+adjustment_factor = 0.9  # How much to reduce dynamically
+best_loss = float('inf')
+early_stop_patience = 10  # Stop training if no improvement for 10 epochs
+no_improvement_epochs = 0
 
 # Training Loop with Progress Bar
 for epoch in range(epochs):
@@ -76,23 +87,28 @@ for epoch in range(epochs):
     
     for text_data, pose_data, imu_data, imu_data_grav in tqdm(dataloader, desc=f"Epoch {epoch+1}/{epochs}"):
         optimizer.zero_grad()
-        
+
         # Prepare Data
-        text_data = text_data.view(text_data.shape[0], 768).to(device)
-        pose_data = pose_data.to(device)
-        imu_data = imu_data.view(imu_data.shape[0], imu_data.shape[2], imu_data.shape[1], 6).to(device)
-        imu_data_grav = imu_data_grav.view(imu_data_grav.shape[0], imu_data_grav.shape[2], imu_data_grav.shape[1], 6).to(device)
-        
-        # Forward Pass
-        text_embeddings, pose_embeddings, imu_embeddings, imu_emb_grav = model(text_data, pose_data, imu_data, imu_data_grav)
-        
-        # Compute Loss
-        total_loss = compute_total_loss(text_embeddings, pose_embeddings, imu_embeddings, imu_emb_grav)
-        total_loss.backward()
+        text_data = text_data.view(text_data.shape[0], 768).to(device, non_blocking=True)
+        pose_data = pose_data.to(device, non_blocking=True)
+        imu_data = imu_data.view(imu_data.shape[0], imu_data.shape[2], imu_data.shape[1], 6).to(device, non_blocking=True)
+        imu_data_grav = imu_data_grav.view(imu_data_grav.shape[0], imu_data_grav.shape[2], imu_data_grav.shape[1], 6).to(device, non_blocking=True)
+
+        # Forward Pass with AMP
+        with torch.cuda.amp.autocast():
+            text_embeddings, pose_embeddings, imu_embeddings, imu_emb_grav = model(text_data, pose_data, imu_data, imu_data_grav)
+            total_loss = compute_total_loss(text_embeddings, pose_embeddings, imu_embeddings, imu_emb_grav)
+
+        # Backward Pass with AMP
+        scaler.scale(total_loss).backward()
         
         # Gradient Clipping
-        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-        
+        scaler.unscale_(optimizer)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=base_max_norm)
+
+        scaler.step(optimizer)
+        scaler.update()
+
         optimizer.step()
 
         # Track Loss
@@ -102,13 +118,24 @@ for epoch in range(epochs):
     avg_loss = epoch_loss / len(dataloader)
     print(f"Epoch [{epoch+1}/{epochs}], Avg Loss: {avg_loss:.4f}")
     
+    # Check for Early Stopping
+    if avg_loss < best_loss:
+        best_loss = avg_loss
+        no_improvement_epochs = 0  # Reset no improvement counter
+    else:
+        no_improvement_epochs += 1
+
+    if no_improvement_epochs >= early_stop_patience:
+        print(f"Early stopping triggered after {epoch+1} epochs with no improvement in loss.")
+        break
+    
     # Adjust Learning Rate
     scheduler.step(avg_loss)
+
 
 # Save Model
 torch.save(model.state_dict(), 'multimodal_jlr_model.pth')
 print("Training complete! Model saved as 'multimodal_jlr_model.pth'.")
-
 
 
 
