@@ -36,12 +36,6 @@ class UniMocapDataset(Dataset):
 
 
 # Custom collate function to handle padding of sequences
-import torch
-import torch.nn.functional as F
-
-import torch
-import torch.nn.functional as F
-
 def collate_fn(batch):
     """
     Custom collate function to handle variable sequence lengths across different data modalities.
@@ -53,9 +47,9 @@ def collate_fn(batch):
     max_imu_len = max([item[2].size(1) for item in batch])  # imu_data: max by 1st dimension (time)
     max_imu_grav_len = max([item[3].size(1) for item in batch])  # imu_data_grav: max by 1st dimension (time)
 
-    print(f"Max Pose Length: {max_pose_len}")
-    print(f"Max IMU Length: {max_imu_len}")
-    print(f"Max IMU Grav Length: {max_imu_grav_len}")
+    #print(f"Max Pose Length: {max_pose_len}")
+    #print(f"Max IMU Length: {max_imu_len}")
+    #print(f"Max IMU Grav Length: {max_imu_grav_len}")
 
     padded_text_data = []
     padded_pose_data = []
@@ -64,18 +58,21 @@ def collate_fn(batch):
 
     for text_data, pose_data, imu_data, imu_data_grav in batch:
         # Print original shapes
-        print(f"Original text_data shape: {text_data.shape}")
-        print(f"Original pose_data shape: {pose_data.shape}")
-        print(f"Original imu_data shape: {imu_data.shape}")
-        print(f"Original imu_data_grav shape: {imu_data_grav.shape}")
+        #print(f"Original text_data shape: {text_data.shape}")
+        #print(f"Original pose_data shape: {pose_data.shape}")
+        #print(f"Original imu_data shape: {imu_data.shape}")
+        #print(f"Original imu_data_grav shape: {imu_data_grav.shape}")
 
         # Pad the text data (text data is assumed to be fixed-size)
         padded_text_data.append(text_data)
 
         # Pad the pose data (pad the time dimension to max_pose_len)
-        pose_padding = (0, 0, 0, max_pose_len - pose_data.size(0))  # Pad the time dimension
+        pose_padding = (0, 0, 0, 0, 0, max_pose_len - pose_data.size(0))  # Correct order
+        #print(pose_data.shape)
+        padded_pose = F.pad(pose_data, pose_padding, value=0)
+        #print(padded_pose.shape)
         padded_pose_data.append(F.pad(pose_data, pose_padding, value=0))
-
+        #print(padded_pose_data)
         # Pad the IMU data (pad the time dimension to max_imu_len)
         imu_padding = (0, 0, 0, max_imu_len - imu_data.size(1))  # Pad the time dimension
         padded_imu_data.append(F.pad(imu_data, imu_padding, value=0))
@@ -91,16 +88,15 @@ def collate_fn(batch):
     padded_imu_data_grav = torch.stack(padded_imu_data_grav)
 
     # Print shapes of the final stacked arrays
-    print(f"Final padded_text_data shape: {padded_text_data.shape}")
-    print(f"Final padded_pose_data shape: {padded_pose_data.shape}")
-    print(f"Final padded_imu_data shape: {padded_imu_data.shape}")
-    print(f"Final padded_imu_data_grav shape: {padded_imu_data_grav.shape}")
+    #print(f"Final padded_text_data shape: {padded_text_data.shape}")
+    #print(f"Final padded_pose_data shape: {padded_pose_data.shape}")
+    #print(f"Final padded_imu_data shape: {padded_imu_data.shape}")
+    #print(f"Final padded_imu_data_grav shape: {padded_imu_data_grav.shape}")
 
     return padded_text_data, padded_pose_data, padded_imu_data, padded_imu_data_grav
 
 
-
-
+'''
 # Define the path to the HDF5 file
 h5_file_path = "../CrosSim_Data/UniMocap/full_dataset.h5"
 
@@ -108,7 +104,7 @@ h5_file_path = "../CrosSim_Data/UniMocap/full_dataset.h5"
 dataset = UniMocapDataset(h5_file_path)
 
 # Create the DataLoader (use appropriate batch size)
-dataloader = DataLoader(dataset, batch_size=1, shuffle=True, collate_fn=collate_fn)
+dataloader = DataLoader(dataset, batch_size=128, shuffle=True, collate_fn=collate_fn, num_workers = 8)
 
 # Example of iterating through the DataLoader
 for text_data, pose_data, imu_data, imu_data_grav in dataloader:
@@ -116,7 +112,7 @@ for text_data, pose_data, imu_data, imu_data_grav in dataloader:
     print(f"pose_data shape: {pose_data.shape}")
     print(f"imu_data shape: {imu_data.shape}")
     print(f"imu_data_grav shape: {imu_data_grav.shape}")
-    # You can use the data for training or other operations here
 
 # Don't forget to close the HDF5 file when you're done
 dataset.close()
+'''
