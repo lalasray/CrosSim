@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 from Encoder.Multi_IMU_Encoder import DeepConvGraphEncoderPre, IMUGraph, GATGraphEncoder
 from Encoder.Gtr_Text_Encoder import EmbeddingEncoder
@@ -10,19 +11,33 @@ from Loss.pretrain_loss import predefined_infonce
 from c_dataloader import UniMocapDataset, collate_fn
 from torch.utils.data import DataLoader
 
+
 # Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Hyperparameters
 batch_size = 256
-epochs = 100
-Embedding_size = 256
+Embedding_size = 512
 window = 1
 stride_size = 1
 Pose_joints = 24
 imu_positions = 21
+hof = 1
+dilation = 1
+
 h5_file_path = "../CrosSim_Data/UniMocap/full_dataset.h5"
 
+epochs = 100
+base_max_norm = 5.0  # Initial value
+min_max_norm = 1.0   # Lower bound
+max_max_norm = 10.0  # Upper bound
+adjustment_factor = 0.9  # How much to reduce dynamically
+best_loss = float('inf')
+early_stop_patience = 10 
+no_improvement_epochs = 0
+patience = 10
+patience_factor = 0.5
+learning_rate = 0.001
 # Instantiate the dataset
 dataset = UniMocapDataset(h5_file_path)
 dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn, num_workers=8, pin_memory=True)
@@ -44,8 +59,8 @@ class MultiModalJLR(nn.Module):
                                                         embedding_dim=64, window_size=window*4, stride=stride_size*4,
                                                         output_dim=Embedding_size).to(device)
         #self.imu_encoder_grav = GATGraphEncoder(num_nodes=21, feature_dim=6, hidden_dim=32, window_size=1, stride=1)
-        self.pose_edge_index = PoseGraph(max_hop=1, dilation=1).edge_index.to(device)
-        self.IMU_edge_index = IMUGraph(max_hop=1, dilation=1).edge_index.to(device)
+        self.pose_edge_index = PoseGraph(max_hop=hof, dilation=dilation).edge_index.to(device)
+        self.IMU_edge_index = IMUGraph(max_hop=hof, dilation=dilation).edge_index.to(device)
 
     def forward(self, text, pose, imu, imu_grav):
         text_embeddings = self.text_encoder(text)
@@ -65,22 +80,15 @@ def compute_total_loss(text_embeddings, pose_embeddings, imu_embeddings, imu_emb
     return total_loss
 
 # Initialize Model, Optimizer, and Scheduler
-model = torch.compile(MultiModalJLR().to(device))
-optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-4)
-scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=10, verbose=True)
-scaler = torch.cuda.amp.GradScaler()
+model = MultiModalJLR().to(device) 
+optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-4)
+scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=patience_factor, patience=patience, verbose=True)
+scaler = torch.amp.GradScaler()
 torch.backends.cudnn.benchmark = True
 
-# Dynamic max_norm settings
-base_max_norm = 5.0  # Initial value
-min_max_norm = 1.0   # Lower bound
-max_max_norm = 10.0  # Upper bound
-adjustment_factor = 0.9  # How much to reduce dynamically
-best_loss = float('inf')
-early_stop_patience = 10  # Stop training if no improvement for 10 epochs
-no_improvement_epochs = 0
-
 # Training Loop with Progress Bar
+loss_values = []  # Store loss per epoch
+
 for epoch in range(epochs):
     model.train()
     epoch_loss = 0
@@ -95,7 +103,8 @@ for epoch in range(epochs):
         imu_data_grav = imu_data_grav.view(imu_data_grav.shape[0], imu_data_grav.shape[2], imu_data_grav.shape[1], 6).to(device, non_blocking=True)
 
         # Forward Pass with AMP
-        with torch.cuda.amp.autocast():
+        with torch.amp.autocast(device_type="cuda" if torch.cuda.is_available() else "cpu"):
+        #with torch.cuda.amp.autocast(enabled=False):
             text_embeddings, pose_embeddings, imu_embeddings, imu_emb_grav = model(text_data, pose_data, imu_data, imu_data_grav)
             total_loss = compute_total_loss(text_embeddings, pose_embeddings, imu_embeddings, imu_emb_grav)
 
@@ -116,6 +125,7 @@ for epoch in range(epochs):
     
     # Compute Average Loss Per Epoch
     avg_loss = epoch_loss / len(dataloader)
+    loss_values.append(avg_loss)  # Store loss for plotting
     print(f"Epoch [{epoch+1}/{epochs}], Avg Loss: {avg_loss:.4f}")
     
     # Check for Early Stopping
@@ -132,10 +142,20 @@ for epoch in range(epochs):
     # Adjust Learning Rate
     scheduler.step(avg_loss)
 
+# Plot Training Loss Curve
+plt.figure(figsize=(8, 6))
+plt.plot(loss_values, marker='o', linestyle='-', color='b', label="Training Loss")
+plt.xlabel("Epochs")
+plt.ylabel("Loss")
+plt.title("Loss Trend Over Epochs")
+plt.legend()
+plt.grid(True)
+plt.show()
 
 # Save Model
 torch.save(model.state_dict(), 'multimodal_jlr_model.pth')
 print("Training complete! Model saved as 'multimodal_jlr_model.pth'.")
+
 
 
 
