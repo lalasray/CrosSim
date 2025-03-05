@@ -16,18 +16,18 @@ from torch.utils.data import DataLoader
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Hyperparameters
-batch_size = 256
+batch_size = 512
 Embedding_size = 512
 window = 1
 stride_size = 1
 Pose_joints = 24
 imu_positions = 21
-hof = 1
+hof = 2
 dilation = 1
 
 h5_file_path = "../CrosSim_Data/UniMocap/full_dataset.h5"
 
-epochs = 100
+epochs = 300
 base_max_norm = 5.0  # Initial value
 min_max_norm = 1.0   # Lower bound
 max_max_norm = 10.0  # Upper bound
@@ -150,7 +150,8 @@ plt.ylabel("Loss")
 plt.title("Loss Trend Over Epochs")
 plt.legend()
 plt.grid(True)
-plt.show()
+plt.savefig("training_loss_plot.png")  # Save the plot
+plt.close()  # Close the figure to free memory
 
 # Save Model
 torch.save(model.state_dict(), 'multimodal_jlr_model.pth')

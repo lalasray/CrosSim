@@ -8,7 +8,7 @@ from Encoder.Gtr_Text_Encoder import EmbeddingEncoder
 from Encoder.Pose_Encoder import GraphPoseEncoderPre, PoseGraph
 from c_dataloader import UniMocapDataset, collate_fn
 from torch.utils.data import DataLoader
-from Pretraining_JLR_optimized import MultiModalJLR, device, h5_file_path, batch_size, best_model_path
+from Pretraining_JLR_optimized_11 import MultiModalJLR, device, h5_file_path, batch_size, best_model_path
 
 # Load dataset for inference
 dataset = UniMocapDataset(h5_file_path)
