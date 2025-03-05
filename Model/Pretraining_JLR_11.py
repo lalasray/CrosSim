@@ -22,7 +22,7 @@ window = 1
 stride_size = 1
 Pose_joints = 24
 imu_positions = 21
-hof = 2
+hof = 3
 dilation = 1
 
 h5_file_path = "../CrosSim_Data/UniMocap/full_dataset.h5"
