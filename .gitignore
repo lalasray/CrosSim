@@ -7,3 +7,4 @@
 /Model/Loss/__pycache__
 *.pth
 /CrosSim_Data
+*.png
