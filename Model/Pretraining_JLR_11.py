@@ -74,25 +74,24 @@ class MultiModalJLR(nn.Module):
 
 # Loss Computation Function
 def compute_total_loss(text_embeddings, pose_embeddings, imu_embeddings, imu_embeddings_grav):
-    def safe_infonce(x, y, name_x, name_y):
+    def safe_infonce(x, y):
         x = torch.clamp(x, min=1e-8)
         y = torch.clamp(y, min=1e-8)
         loss = predefined_infonce(x, y)
         return torch.nan_to_num(loss, nan=0.0, posinf=1.0, neginf=-1.0)
 
-    loss_text_pose = safe_infonce(text_embeddings, pose_embeddings, "text_embeddings", "pose_embeddings")
-    loss_text_imu = safe_infonce(text_embeddings, imu_embeddings, "text_embeddings", "imu_embeddings")
-    loss_text_single_imu = safe_infonce(text_embeddings, imu_embeddings_grav, "text_embeddings", "imu_embeddings_grav")
-    loss_pose_imu = safe_infonce(pose_embeddings, imu_embeddings, "pose_embeddings", "imu_embeddings")
-    loss_imu_single_imu = safe_infonce(imu_embeddings, imu_embeddings_grav, "imu_embeddings", "imu_embeddings_grav")
-    loss_pose_single_imu = safe_infonce(pose_embeddings, imu_embeddings_grav, "pose_embeddings", "imu_embeddings_grav")
+    loss_text_pose = safe_infonce(text_embeddings, pose_embeddings)
+    loss_text_imu = safe_infonce(text_embeddings, imu_embeddings)
+    loss_text_imugrav = safe_infonce(text_embeddings, imu_embeddings_grav)
+    loss_pose_imu = safe_infonce(pose_embeddings, imu_embeddings)
+    loss_imu_imugrav = safe_infonce(imu_embeddings, imu_embeddings_grav)
+    loss_pose_imugrav = safe_infonce(pose_embeddings, imu_embeddings_grav)
 
     total_loss = torch.nanmean(torch.stack([
-        loss_text_pose, loss_text_imu, loss_pose_imu, loss_text_single_imu, loss_imu_single_imu, loss_pose_single_imu
+        loss_text_pose, loss_text_imu, loss_pose_imu, loss_text_imugrav, loss_imu_imugrav, loss_pose_imugrav
     ]))
 
-    return total_loss
-
+    return total_loss, loss_text_pose, loss_text_imu, loss_pose_imu, loss_text_imugrav, loss_imu_imugrav, loss_pose_imugrav
 # Initialize Model, Optimizer, and Scheduler
 model = MultiModalJLR().to(device)
 optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-4)
@@ -101,9 +100,22 @@ torch.backends.cudnn.benchmark = True
 
 # Training Loop with Float32 Only
 loss_values = []
+loss_values_text_pose = []
+loss_values_text_imu = []
+loss_values_pose_imu = []
+loss_values_text_imugrav = []
+loss_values_imu_imugrav = []
+loss_values_pose_imugrav = []
+
 for epoch in range(epochs):
     model.train()
     epoch_loss = 0
+    epoch_loss_text_pose = 0
+    epoch_loss_text_imu = 0
+    epoch_loss_pose_imu = 0
+    epoch_loss_text_imugrav = 0
+    epoch_loss_imu_imugrav = 0
+    epoch_loss_pose_imugrav = 0
 
     for text_data, pose_data, imu_data, imu_data_grav in tqdm(dataloader, desc=f"Epoch {epoch+1}/{epochs}"):
         optimizer.zero_grad()
@@ -135,17 +147,37 @@ for epoch in range(epochs):
         if torch.isnan(imu_emb_grav).any():
             log_message("NaN detected in imu_embeddings_grav")
 
-        total_loss = compute_total_loss(text_embeddings, pose_embeddings, imu_embeddings, imu_emb_grav)
+        total_loss, loss_text_pose, loss_text_imu, loss_pose_imu, loss_text_imugrav, loss_imu_imugrav, loss_pose_imugrav = compute_total_loss(text_embeddings, pose_embeddings, imu_embeddings, imu_emb_grav)
 
         total_loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=base_max_norm)
         optimizer.step()
 
         epoch_loss += total_loss.item()
+        epoch_loss_text_pose += loss_text_pose.item()
+        epoch_loss_text_imu += loss_text_imu.item()
+        epoch_loss_pose_imu += loss_pose_imu.item()
+        epoch_loss_text_imugrav += loss_text_imugrav.item()
+        epoch_loss_imu_imugrav += loss_imu_imugrav.item()
+        epoch_loss_pose_imugrav += loss_pose_imugrav.item()
 
     avg_loss = epoch_loss / len(dataloader)
+    avg_loss_text_pose = epoch_loss_text_pose / len(dataloader)
+    avg_loss_text_imu = epoch_loss_text_imu / len(dataloader)
+    avg_loss_pose_imu = epoch_loss_pose_imu / len(dataloader)
+    avg_loss_text_imugrav = epoch_loss_text_imugrav / len(dataloader)
+    avg_loss_imu_imugrav = epoch_loss_imu_imugrav / len(dataloader)
+    avg_loss_pose_imugrav = epoch_loss_pose_imugrav / len(dataloader)
+
     loss_values.append(avg_loss)
-    log_message(f"Epoch [{epoch+1}/{epochs}], Avg Loss: {avg_loss:.4f}")
+    loss_values_text_pose.append(avg_loss_text_pose)
+    loss_values_text_imu.append(avg_loss_text_imu)
+    loss_values_pose_imu.append(avg_loss_pose_imu)
+    loss_values_text_imugrav.append(avg_loss_text_imugrav)
+    loss_values_imu_imugrav.append(avg_loss_imu_imugrav)
+    loss_values_pose_imugrav.append(avg_loss_pose_imugrav)
+
+    log_message(f"Epoch [{epoch+1}/{epochs}], avg_loss: {avg_loss:.4f},  avg_loss_pose_imugrav: {avg_loss_pose_imugrav:.4f},  avg_loss_text_pose: {avg_loss_text_pose:.4f}, avg_loss_text_imu: {avg_loss_text_imu:.4f} , avg_loss_pose_imu: {avg_loss_pose_imu:.4f},  avg_loss_text_imugrav: {avg_loss_text_imugrav:.4f},  avg_loss_imu_imugrav: {avg_loss_imu_imugrav:.4f}")
 
     if avg_loss < best_loss:
         best_loss = avg_loss
