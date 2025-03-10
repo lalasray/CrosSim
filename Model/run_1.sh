@@ -1,8 +1,8 @@
 
-
+N=lala"$@"
 
 #	 --time=4-00:00 \
-srun -K  --job-name=lali \
+srun -K  --job-name=$N \
 	 --partition=A100-80GB,H100,H200,RTXA6000 \
 	 --gpus=1 \
 	 --cpus-per-task=8 \
