@@ -2,7 +2,6 @@ import vec2text
 import torch
 from transformers import AutoModel, AutoTokenizer
 import torch.nn as nn
-
 import torch
 import torch.nn as nn
 

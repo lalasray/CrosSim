@@ -25,9 +25,8 @@ def count_parameters(model):
 
 # Model Definition
 class MultiModalJLR(nn.Module):
-    def __init__(self, embedding_size=512, pose_joints=24, imu_positions=21, window=1, stride_size=1, hof=3, dilation=1):
+    def __init__(self, embedding_size=768, pose_joints=24, imu_positions=21, window=1, stride_size=1, hof=3, dilation=1):
         super(MultiModalJLR, self).__init__()
-        self.text_encoder = EmbeddingEncoder(output_size=embedding_size).to(device)
         self.pose_encoder = GraphPoseEncoderPre(num_nodes=pose_joints, feature_dim=6, hidden_dim=128,
                                                 embedding_dim=64, window_size=window, stride=stride_size,
                                                 output_dim=embedding_size).to(device)
@@ -41,7 +40,7 @@ class MultiModalJLR(nn.Module):
         self.IMU_edge_index = IMUGraph(max_hop=hof, dilation=dilation).edge_index.to(device)
 
     def forward(self, text, pose, imu, imu_grav):
-        text_embeddings = self.text_encoder(text)
+        text_embeddings = text
         pose_embeddings = self.pose_encoder(pose, self.pose_edge_index)
         imu_embeddings = self.imu_encoder(imu, self.IMU_edge_index)
         imu_embeddings_grav = self.imu_encoder_grav(imu_grav, self.IMU_edge_index)
@@ -68,7 +67,7 @@ def compute_total_loss(text_embeddings, pose_embeddings, imu_embeddings, imu_emb
 
 # Training Function
 def train_model(epochs=300, batch_size=256, learning_rate=0.001, early_stop_patience=80, patience=20, patience_factor=0.5, h5_file_path = "../CrosSim_Data/UniMocap/full_dataset.h5"):
-    log_file = open("training_log_jlr_ft_11.txt", "w")
+    log_file = open("training_log_jlr_11.txt", "w")
     log_message(log_file, "Starting Training...")
 
     # Load dataset
@@ -124,7 +123,7 @@ def train_model(epochs=300, batch_size=256, learning_rate=0.001, early_stop_pati
 
         scheduler.step(avg_loss)
 
-    torch.save(model.state_dict(), "jlr_ft_11.pth")
+    torch.save(model.state_dict(), "jlr_11.pth")
     log_message(log_file, "Training complete! Model saved.")
 
     log_file.close()
