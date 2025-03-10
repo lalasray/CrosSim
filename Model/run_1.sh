@@ -1,5 +1,5 @@
 
-N=lala"$@"
+N=CrosSim"$@"
 
 #	 --time=4-00:00 \
 srun -K  --job-name=$N \
@@ -13,4 +13,4 @@ srun -K  --job-name=$N \
          --container-workdir=`pwd` \
          --container-mounts=/netscratch:/netscratch,/ds:/ds,`pwd`:`pwd` \
          --export="NCCL_SOCKET_IFNAME=bond,NCCL_IB_HCA=mlx5" \
-          install.sh python Cluster_Pretraining_JLR_11.py --cmt "$@" &
+          install.sh python Cluster_Pretraining_11.py --cmt "$@" &
