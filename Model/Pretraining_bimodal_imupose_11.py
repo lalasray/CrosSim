@@ -66,7 +66,7 @@ def train_bipose(epochs=300, batch_size=256, learning_rate=0.001, early_stop_pat
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn, num_workers=8, pin_memory=True)
 
     # Initialize model, optimizer, scheduler
-    model = MultiModalJLR().to(device)
+    model = BiModalIMU().to(device)
     print(f"Total Trainable Parameters: {count_parameters(model):,}")
     optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-4)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=patience_factor, patience=patience, verbose=True)
