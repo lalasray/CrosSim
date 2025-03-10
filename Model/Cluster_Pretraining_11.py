@@ -13,3 +13,9 @@ train_bimodel(epochs=300, batch_size=512,h5_file_path = h5_file_path)
 
 from Pretraining_bimodal_imupose_11 import train_bipose
 train_bipose(epochs=300, batch_size=512,h5_file_path = h5_file_path)
+
+from Pretraining_JLR_imubi_11 import train_model_imubi
+train_model_imubi(epochs=300, batch_size=512,h5_file_path = h5_file_path)
+
+from Pretraining_JLR_imubi_ft_11 import train_model_imubi_ft
+train_model_imubi_ft(epochs=300, batch_size=512,h5_file_path = h5_file_path)

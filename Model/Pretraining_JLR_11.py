@@ -31,24 +31,20 @@ class MultiModalJLR(nn.Module):
         self.pose_encoder = GraphPoseEncoderPre(num_nodes=pose_joints, feature_dim=6, hidden_dim=128,
                                                 embedding_dim=64, window_size=window, stride=stride_size,
                                                 output_dim=embedding_size).to(device)
-        self.imu_encoder = DeepConvGraphEncoderPre(num_nodes=imu_positions, feature_dim=6, hidden_dim=128,
-                                                   embedding_dim=64, window_size=window * 4, stride=stride_size * 4,
-                                                   output_dim=embedding_size).to(device)
         self.imu_encoder_grav = DeepConvGraphEncoderPre(num_nodes=imu_positions, feature_dim=6, hidden_dim=128,
                                                         embedding_dim=64, window_size=window * 4, stride=stride_size * 4,
                                                         output_dim=embedding_size).to(device)
         self.pose_edge_index = PoseGraph(max_hop=hof, dilation=dilation).edge_index.to(device)
         self.IMU_edge_index = IMUGraph(max_hop=hof, dilation=dilation).edge_index.to(device)
 
-    def forward(self, text, pose, imu, imu_grav):
+    def forward(self, text, pose, imu_grav):
         text_embeddings = self.text_encoder(text)
         pose_embeddings = self.pose_encoder(pose, self.pose_edge_index)
-        imu_embeddings = self.imu_encoder(imu, self.IMU_edge_index)
         imu_embeddings_grav = self.imu_encoder_grav(imu_grav, self.IMU_edge_index)
-        return text_embeddings, pose_embeddings, imu_embeddings, imu_embeddings_grav
+        return text_embeddings, pose_embeddings, imu_embeddings_grav
 
 # Loss Computation
-def compute_total_loss(text_embeddings, pose_embeddings, imu_embeddings, imu_embeddings_grav):
+def compute_total_loss(text_embeddings, pose_embeddings, imu_embeddings_grav):
     def safe_infonce(x, y):
         x = torch.clamp(x, min=1e-8)
         y = torch.clamp(y, min=1e-8)
@@ -57,10 +53,7 @@ def compute_total_loss(text_embeddings, pose_embeddings, imu_embeddings, imu_emb
 
     total_loss = torch.nanmean(torch.stack([
         safe_infonce(text_embeddings, pose_embeddings),
-        safe_infonce(text_embeddings, imu_embeddings),
         safe_infonce(text_embeddings, imu_embeddings_grav),
-        safe_infonce(pose_embeddings, imu_embeddings),
-        safe_infonce(imu_embeddings, imu_embeddings_grav),
         safe_infonce(pose_embeddings, imu_embeddings_grav)
     ]))
 
@@ -95,12 +88,11 @@ def train_model(epochs=300, batch_size=256, learning_rate=0.001, early_stop_pati
             optimizer.zero_grad()
             text_data = text_data.view(text_data.shape[0], 768).to(device, dtype=torch.float32, non_blocking=True)
             pose_data = pose_data.to(device, dtype=torch.float32, non_blocking=True)
-            imu_data = imu_data.view(imu_data.shape[0], imu_data.shape[2], imu_data.shape[1], 6).to(device, dtype=torch.float32, non_blocking=True)
             imu_data_grav = imu_data_grav.view(imu_data_grav.shape[0], imu_data_grav.shape[2], imu_data_grav.shape[1], 6).to(device, dtype=torch.float32, non_blocking=True)
 
-            text_embeddings, pose_embeddings, imu_embeddings, imu_emb_grav = model(text_data, pose_data, imu_data, imu_data_grav)
+            text_embeddings, pose_embeddings,imu_emb_grav = model(text_data, pose_data, imu_data_grav)
 
-            total_loss = compute_total_loss(text_embeddings, pose_embeddings, imu_embeddings, imu_emb_grav)
+            total_loss = compute_total_loss(text_embeddings, pose_embeddings,imu_emb_grav)
             total_loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
