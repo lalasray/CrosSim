@@ -1,5 +1,6 @@
 srun -K  --job-name=lali \
-	 --partition=A100-80GB,H100,H200,RTXA6000\
+	 --partition=A100-80GB,H100,H200,RTXA6000 \
+	 --time=6-00:00 \
 	 --gpus=1 \
 	 --cpus-per-task=8 \
 	 --mem=200G \
