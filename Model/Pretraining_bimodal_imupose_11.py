@@ -56,7 +56,7 @@ def compute_total_loss(pose_embeddings,imu_embeddings_grav):
     return total_loss
 
 # Training Function
-def train_model(epochs=300, batch_size=256, learning_rate=0.001, early_stop_patience=80, patience=20, patience_factor=0.5, h5_file_path = "../CrosSim_Data/UniMocap/full_dataset.h5"):
+def train_bipose(epochs=300, batch_size=256, learning_rate=0.001, early_stop_patience=80, patience=20, patience_factor=0.5, h5_file_path = "../CrosSim_Data/UniMocap/full_dataset.h5"):
     log_file = open("training_log_imupose_11.txt", "w")
     log_message(log_file, "Starting Training...")
 
@@ -117,4 +117,4 @@ def train_model(epochs=300, batch_size=256, learning_rate=0.001, early_stop_pati
     log_file.close()
 
 if __name__ == "__main__":
-    train_model()
+    train_bipose()

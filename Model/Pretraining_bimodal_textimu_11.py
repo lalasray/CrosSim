@@ -53,7 +53,7 @@ def compute_total_loss(text_embeddings,imu_embeddings_grav):
     return total_loss
 
 # Training Function
-def train_model(epochs=300, batch_size=512, learning_rate=0.001, early_stop_patience=20, patience=15, patience_factor=0.5, h5_file_path = "../CrosSim_Data/UniMocap/full_dataset.h5"):
+def train_bimodel(epochs=300, batch_size=512, learning_rate=0.001, early_stop_patience=20, patience=15, patience_factor=0.5, h5_file_path = "../CrosSim_Data/UniMocap/full_dataset.h5"):
     log_file = open("training_log_textimu_11.txt", "w")
     log_message(log_file, "Starting Training...")
 
@@ -114,4 +114,4 @@ def train_model(epochs=300, batch_size=512, learning_rate=0.001, early_stop_pati
     log_file.close()
 
 if __name__ == "__main__":
-    train_model()
+    train_bimodel()
