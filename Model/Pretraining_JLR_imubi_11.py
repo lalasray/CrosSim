@@ -4,9 +4,9 @@ import torch.optim as optim
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
-from Encoder.Multi_IMU_Encoder import DeepConvGraphEncoderPre, IMUGraph, GATGraphEncoder
+from Encoder.Multi_IMU_Encoder import DeepConvGraphEncoderPre, IMUGraph
 from Encoder.Gtr_Text_Encoder import EmbeddingEncoder
-from Encoder.Pose_Encoder import GraphPoseEncoderPre, PoseGraph, GATPoseGraphEncoder
+from Encoder.Pose_Encoder import GraphPoseEncoderPre, PoseGraph
 from Loss.pretrain_loss import predefined_infonce
 from c_dataloader import UniMocapDataset, collate_fn
 from torch.utils.data import DataLoader

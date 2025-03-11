@@ -4,9 +4,9 @@ import torch.optim as optim
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
-from Encoder.Multi_IMU_Encoder import DeepConvGraphEncoderPre, IMUGraph, GATGraphEncoder
+from Encoder.Multi_IMU_Encoder import DeepConvGraphEncoderPre, IMUGraph
 from Encoder.Gtr_Text_Encoder import EmbeddingEncoder
-from Encoder.Pose_Encoder import GraphPoseEncoderPre, PoseGraph, GATPoseGraphEncoder
+from Encoder.Pose_Encoder import GraphPoseEncoderPre, PoseGraph
 from Loss.pretrain_loss import predefined_infonce
 from c_dataloader import UniMocapDataset, collate_fn
 from torch.utils.data import DataLoader
@@ -53,7 +53,7 @@ def compute_total_loss(text_embeddings,imu_embeddings_grav):
     return total_loss
 
 # Training Function
-def train_bimodel(epochs=300, batch_size=512, learning_rate=0.001, early_stop_patience=20, patience=15, patience_factor=0.5, h5_file_path = "../CrosSim_Data/UniMocap/full_dataset.h5"):
+def train_bimodel(epochs=300, batch_size=128, learning_rate=0.001, early_stop_patience=20, patience=15, patience_factor=0.5, h5_file_path = "../CrosSim_Data/UniMocap/full_dataset.h5"):
     log_file = open("training_log_textimu_11.txt", "w")
     log_message(log_file, "Starting Training...")
 
