@@ -7,7 +7,7 @@ srun -K  --job-name=$N \
 	  --time=3-00:00 \
 	 --gpus=1 \
 	 --cpus-per-task=8 \
-	 --mem=200G \
+	 --mem=100G \
 	 --output output/console.%A_%a.out \
 	 --error output/console.%A_%a.error  \
          --container-image=/netscratch/enroot/nvcr.io_nvidia_pytorch_23.07-py3.sqsh \
