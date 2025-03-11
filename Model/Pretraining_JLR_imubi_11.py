@@ -67,7 +67,7 @@ def compute_total_loss(text_embeddings, pose_embeddings, imu_embeddings, imu_emb
     return total_loss
 
 # Training Function
-def train_model_imubi(epochs=300, batch_size=256, learning_rate=0.001, early_stop_patience=80, patience=20, patience_factor=0.5, h5_file_path = "../CrosSim_Data/UniMocap/full_dataset.h5"):
+def train_model_imubi(epochs=300, batch_size=128, learning_rate=0.001, early_stop_patience=10, patience=7, patience_factor=0.5, h5_file_path = "../CrosSim_Data/UniMocap/full_dataset.h5"):
     log_file = open("training_log_jlr_imubi_11.txt", "w")
     log_message(log_file, "Starting Training...")
 
