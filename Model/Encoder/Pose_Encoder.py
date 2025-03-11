@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import GCNConv,GATv2Conv
 import numpy as np
+import math
 
 class TemporalAttention(nn.Module):
     def __init__(self, input_dim, output_dim):
@@ -15,76 +16,117 @@ class TemporalAttention(nn.Module):
         x_weighted = (x * weights).sum(dim=1)  # [batch_size, input_dim]
         return self.output_layer(x_weighted)  # [batch_size, output_dim]
 
-class GATPoseGraphEncoder(nn.Module):
-    def __init__(self, num_nodes, feature_dim, hidden_dim, output_dim=512, window_size=1, stride=1, heads=4):
-        super(GATPoseGraphEncoder, self).__init__()
-        self.window_size = window_size
-        self.stride = stride
+
+class NodeSelfAttention(nn.Module):
+    def __init__(self, hidden_dim):
+        super(NodeSelfAttention, self).__init__()
+        self.query = nn.Linear(hidden_dim, hidden_dim)
+        self.key = nn.Linear(hidden_dim, hidden_dim)
+        self.value = nn.Linear(hidden_dim, hidden_dim)
+        self.scale = hidden_dim ** 0.5  # Scaling factor for stability
+
+    def forward(self, x):
+        """
+        x: (batch_size, num_nodes, hidden_dim)
+        """
+        Q = self.query(x)  # (batch_size, num_nodes, hidden_dim)
+        K = self.key(x)    # (batch_size, num_nodes, hidden_dim)
+        V = self.value(x)  # (batch_size, num_nodes, hidden_dim)
+
+        # Compute attention scores (batch_size, num_nodes, num_nodes)
+        attention_scores = torch.matmul(Q, K.transpose(-2, -1)) / self.scale
+        attention_weights = F.softmax(attention_scores, dim=-1)
+
+        # Compute weighted sum (batch_size, num_nodes, hidden_dim)
+        attention_out = torch.matmul(attention_weights, V)
+
+        # Aggregate node embeddings (batch_size, hidden_dim)
+        aggregated_nodes = attention_out.mean(dim=1)
+
+        return aggregated_nodes
+
+
+class ResidualGCN(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(ResidualGCN, self).__init__()
+        self.gcn = GCNConv(in_channels, out_channels)
+        self.norm = nn.LayerNorm(out_channels)
+        self.residual = (in_channels == out_channels)  # Ensure residual connection is valid
+
+    def forward(self, x, edge_index):
+        out = self.gcn(x, edge_index)
+        out = self.norm(out)  # Apply LayerNorm
+        if self.residual:
+            out = out + x  # Residual connection
+        return F.relu(out)
+
+
+class NodePositionalEncoding(nn.Module):
+    def __init__(self, num_nodes, hidden_dim):
+        super(NodePositionalEncoding, self).__init__()
         self.num_nodes = num_nodes
         self.hidden_dim = hidden_dim
-        self.output_dim = output_dim
+        self.encoding = self.create_positional_encoding()
 
-        # Graph Attention Layers (GATConv)
-        self.conv1 = GATv2Conv(feature_dim, 4, heads=heads, concat=True)
-        self.conv2 = GATv2Conv(4 * heads, 16, heads=heads, concat=True)
-        self.conv3 = GATv2Conv(16 * heads, hidden_dim, heads=1, concat=False)  # Last layer has 1 head
-
-        # Fully connected layers (initialized dynamically)
-        self.fc1 = None
-        self.fc2 = None
-
-    def forward(self, data, edge_index):
-        batch_size, time_steps, num_nodes, feature_dim = data.shape
-        embeddings = []
+    def create_positional_encoding(self):
+        """
+        Generates a sinusoidal positional encoding for nodes.
+        Shape: (num_nodes, hidden_dim)
+        """
+        position = torch.arange(self.num_nodes).unsqueeze(1).float()  # Shape: (num_nodes, 1)
+        div_term = torch.exp(torch.arange(0, self.hidden_dim, 2).float() * 
+                             (-math.log(10000.0) / self.hidden_dim))  # Shape: (hidden_dim/2,)
         
-        num_windows = (time_steps - self.window_size) // self.stride + 1  # Calculate number of windows dynamically
+        pe = torch.zeros(self.num_nodes, self.hidden_dim)
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        
+        return pe
 
-        for i in range(0, time_steps - self.window_size + 1, self.stride):
-            window = data[:, i:i+self.window_size, :, :].reshape(batch_size * self.window_size, num_nodes, feature_dim)
-            outputs = []
-            for batch_idx in range(window.shape[0]):  # Process each sample separately
-                x = window[batch_idx]  # Shape: (num_nodes, feature_dim)
-                x = F.relu(self.conv1(x, edge_index))
-                x = F.relu(self.conv2(x, edge_index))
-                x = F.relu(self.conv3(x, edge_index))
-                outputs.append(x)
-            
-            x = torch.stack(outputs)  # Shape: (batch_size * window_size, num_nodes, hidden_dim)
-            x = x.view(batch_size, self.window_size, self.num_nodes, -1).mean(dim=2)  # Mean over nodes
-            embeddings.append(x)
-        
-        embeddings = torch.stack(embeddings, dim=1)  # Shape: (batch_size, num_windows, hidden_dim)
-        embeddings = embeddings.view(embeddings.shape[0], -1)  # Flatten time steps
-        
-        # Dynamically initialize FC layers based on the computed embedding dimension
-        if self.fc1 is None or self.fc2 is None:
-            input_dim = embeddings.shape[1]  # Dynamically determine the input size
-            self.fc1 = nn.Linear(input_dim, num_windows).to(embeddings.device)  # Reduce by half dynamically
-            self.fc2 = nn.Linear(num_windows, self.output_dim).to(embeddings.device)  # Map to output_dim
-        
-        embeddings = self.fc1(embeddings)  
-        embeddings = self.fc2(embeddings)  
+    def forward(self, x):
+        """
+        Adds positional encoding to the node features.
+        x: (batch_size, num_nodes, feature_dim)
+        """
+        pe = self.encoding.to(x.device)  # Move encoding to the same device as input
+        return x + pe.unsqueeze(0)  # Add encoding to all batch elements
 
-        return embeddings
-    
+
 class GraphPoseEncoderPre(nn.Module):
-    def __init__(self, num_nodes, feature_dim, hidden_dim, embedding_dim, window_size=1, stride=1, output_dim=512):
+    def __init__(self, num_nodes, feature_dim, hidden_dim, embedding_dim, window_size=1, stride=1, output_dim=512, dropout_prob=0.5):
         super(GraphPoseEncoderPre, self).__init__()
         self.window_size = window_size
         self.stride = stride
         self.num_nodes = num_nodes
         
-        # Graph convolution layers
-        self.conv1 = GCNConv(feature_dim, 64)
-        self.conv2 = GCNConv(64, 128)
-        self.conv3 = GCNConv(128, 256)
-        self.conv4 = GCNConv(256, hidden_dim)
+        # Positional Encoding for Nodes
+        self.node_pos_encoding = NodePositionalEncoding(num_nodes, feature_dim)
         
-        # Temporal modeling using LSTM
-        self.lstm = nn.LSTM(input_size=hidden_dim, hidden_size=hidden_dim, batch_first=True, bidirectional=True)
+        # Graph convolution layers with Residual connections
+        self.conv1 = ResidualGCN(feature_dim, 64)
+        self.conv2 = ResidualGCN(64, 128)
+        self.conv3 = ResidualGCN(128, 256)
+        self.conv4 = ResidualGCN(256, hidden_dim)
+        
+        # LayerNorm applied after each GCN layer
+        self.layer_norm1 = nn.LayerNorm(64)
+        self.layer_norm2 = nn.LayerNorm(128)
+        self.layer_norm3 = nn.LayerNorm(256)
+        self.layer_norm4 = nn.LayerNorm(hidden_dim)
+
+        # Node-Level Self-Attention
+        self.node_attention = NodeSelfAttention(hidden_dim)
+        
+        # Transformer Encoder
+        self.transformer_encoder_layer = nn.TransformerEncoderLayer(
+            d_model=hidden_dim, nhead=8, batch_first=True, dim_feedforward=hidden_dim*2, dropout=dropout_prob)
+        self.transformer_encoder = nn.TransformerEncoder(self.transformer_encoder_layer, num_layers=6)
         
         # Fully connected layer for final embedding
-        self.fc = nn.Linear(hidden_dim * 2, embedding_dim)
+        self.fc = nn.Linear(hidden_dim, embedding_dim)
+        
+        # Dropout layer
+        self.dropout = nn.Dropout(dropout_prob)
         
         # Attention model
         self.attention_model = TemporalAttention(embedding_dim, output_dim)
@@ -95,80 +137,41 @@ class GraphPoseEncoderPre(nn.Module):
         
         for i in range(0, time_steps - self.window_size + 1, self.stride):
             window = data[:, i:i+self.window_size, :, :].reshape(-1, num_nodes, feature_dim)
-            
-            x = F.relu(self.conv1(window, edge_index))
-            x = F.relu(self.conv2(x, edge_index))
-            x = F.relu(self.conv3(x, edge_index))
-            x = F.relu(self.conv4(x, edge_index))
-            
-            x = x.view(batch_size, self.window_size, self.num_nodes, -1).mean(dim=2)
-            lstm_out, _ = self.lstm(x.view(batch_size, self.window_size, -1))
-            embedding = self.fc(lstm_out[:, -1, :])
-            embeddings.append(embedding)
-        
-        embeddings = torch.stack(embeddings, dim=1)
-        x_transformed = self.attention_model(embeddings)
-        
-        return x_transformed
 
-        
-class GraphPoseEncoderDown(nn.Module):
-    def __init__(self, num_nodes, feature_dim, hidden_dim, embedding_dim, window_size, stride=2):
-        super(GraphPoseEncoderDown, self).__init__()
-        self.window_size = window_size
-        self.stride = stride
-        self.num_nodes = num_nodes
-        
-        # Graph convolution layers
-        self.conv1 = GCNConv(feature_dim, 64)
-        self.conv2 = GCNConv(64, 128)
-        self.conv3 = GCNConv(128, 256)
-        self.conv4 = GCNConv(256, hidden_dim)
-        
-        # Temporal modeling using LSTM
-        self.lstm = nn.LSTM(input_size=hidden_dim, hidden_size=hidden_dim, batch_first=True, bidirectional=True)
-        
-        # Fully connected layer for final embedding
-        self.fc = nn.Linear(hidden_dim*2, embedding_dim)
+            # Apply Positional Encoding
+            window = self.node_pos_encoding(window)
 
-    def forward(self, data, edge_index):
-        """
-        Args:
-            data: A tensor of shape (batch_size, time_steps, num_nodes, feature_dim)
-            edge_index: The edge index tensor for the graph structure.
-        Returns:
-            A tensor of shape (batch_size, num_windows, embedding_dim)
-        """
-        batch_size, time_steps, num_nodes, feature_dim = data.shape
-        embeddings = []
-        
-        # Slide the window over the input sequence with stride
-        for i in range(0, time_steps - self.window_size + 1, self.stride):
-            window = data[:, i:i+self.window_size, :, :]  # (batch_size, window_size, num_nodes, feature_dim)
-            window = window.reshape(-1, num_nodes, feature_dim)  # Reshape for GCN
-            
-            # Apply graph convolutions
-            x = F.relu(self.conv1(window, edge_index))
-            x = F.relu(self.conv2(x, edge_index))
-            x = F.relu(self.conv3(x, edge_index))
-            x = F.relu(self.conv4(x, edge_index))
+            x = self.conv1(window, edge_index)
+            x = self.layer_norm1(x)  # LayerNorm after conv1
+            x = self.conv2(x, edge_index)
+            x = self.layer_norm2(x)  # LayerNorm after conv2
+            x = self.conv3(x, edge_index)
+            x = self.layer_norm3(x)  # LayerNorm after conv3
+            x = self.conv4(x, edge_index)
+            x = self.layer_norm4(x)  # LayerNorm after conv4
             
             # Reshape to (batch_size, window_size, num_nodes, hidden_dim)
             x = x.view(batch_size, self.window_size, self.num_nodes, -1)
             
-            # Aggregate node features across the graph (mean pooling)
-            x = x.mean(dim=2)
+            # Apply Node-Level Self-Attention
+            x = self.node_attention(x.view(batch_size * self.window_size, num_nodes, -1))  
+            x = x.view(batch_size, self.window_size, -1)  # (batch_size, window_size, hidden_dim)
             
-            # Temporal modeling with LSTM
-            lstm_input = x.view(batch_size, self.window_size, -1)  # (batch_size, window_size, hidden_dim)
-            lstm_out, _ = self.lstm(lstm_input)
-            lstm_last_out = lstm_out[:, -1, :]  # Use the last output of LSTM for embedding
+            # Pass through Transformer Encoder
+            x = x.permute(1, 0, 2)  # Shape: (window_size, batch_size, hidden_dim)
+            transformer_out = self.transformer_encoder(x)  # Shape: (window_size, batch_size, hidden_dim)
+            transformer_out = transformer_out.permute(1, 0, 2)  # Shape: (batch_size, window_size, hidden_dim)
             
-            # Fully connected layer for final embedding
-            embedding = self.fc(lstm_last_out)
+            # Take the last time step embedding (or you can use a pooling operation)
+            embedding = transformer_out[:, -1, :]
+            embedding = self.fc(embedding)  # (batch_size, embedding_dim)
             embeddings.append(embedding)
         
-        return torch.stack(embeddings, dim=1)  # (batch_size, num_windows, embedding_dim)
+        embeddings = torch.stack(embeddings, dim=1)  # (batch_size, num_windows, embedding_dim)
+        x_transformed = self.attention_model(embeddings)
+        
+        return x_transformed
+
 
 # Support classes and functions
 class PoseGraph:
@@ -258,7 +261,9 @@ def main():
     graph = PoseGraph(max_hop=1, dilation=1)
     edge_index = graph.edge_index
 
-    encoder = GATPoseGraphEncoder(num_nodes=24, feature_dim=6, hidden_dim=128, window_size=1, stride=1)
+    encoder = GraphPoseEncoderPre(num_nodes=24, feature_dim=6, hidden_dim=128,
+                                                embedding_dim=64, window_size=1, stride=1,
+                                                output_dim=768)
 
     # Sample input: (batch_size=16, time_steps=25, num_nodes=24, feature_dim=3)
     sample_input = torch.randn(16, 25, 24, 6)
