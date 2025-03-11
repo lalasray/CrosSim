@@ -73,3 +73,16 @@ class InfoNCELoss(nn.Module):
         # Apply CrossEntropyLoss
         loss = F.cross_entropy(similarity_matrix, labels)
         return loss
+    
+def contra_loss(pose_embeddings,imu_embeddings_grav):
+    def safe_infonce(x, y):
+        x = torch.clamp(x, min=1e-8)
+        y = torch.clamp(y, min=1e-8)
+        loss = predefined_infonce(x, y)
+        return torch.nan_to_num(loss, nan=0.0, posinf=1.0, neginf=-1.0)
+
+    total_loss = torch.nanmean(torch.stack([
+        safe_infonce(pose_embeddings, imu_embeddings_grav)
+    ]))
+
+    return total_loss

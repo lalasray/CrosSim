@@ -31,7 +31,7 @@ class NodeSelfAttention(nn.Module):
         """
         Q = self.query(x)  # (batch_size, num_nodes, hidden_dim)
         K = self.key(x)    # (batch_size, num_nodes, hidden_dim)
-        V = self.value(x)  # (batch_size, num_nodes, hidden_dim)
+        V = self.value(x)  # (batch_size, num_nodes, hidden_dim)c
 
         # Compute attention scores (batch_size, num_nodes, num_nodes)
         attention_scores = torch.matmul(Q, K.transpose(-2, -1)) / self.scale
@@ -119,8 +119,8 @@ class DeepConvGraphEncoderPre(nn.Module):
         
         # Transformer Encoder
         self.transformer_encoder_layer = nn.TransformerEncoderLayer(
-            d_model=hidden_dim, nhead=8, batch_first=True, dim_feedforward=hidden_dim*2, dropout=dropout_prob)
-        self.transformer_encoder = nn.TransformerEncoder(self.transformer_encoder_layer, num_layers=6)
+            d_model=hidden_dim, nhead=4, batch_first=True, dim_feedforward=hidden_dim*2, dropout=dropout_prob)
+        self.transformer_encoder = nn.TransformerEncoder(self.transformer_encoder_layer, num_layers=3)
         
         # Fully connected layer for final embedding
         self.fc = nn.Linear(hidden_dim, embedding_dim)
@@ -170,7 +170,7 @@ class DeepConvGraphEncoderPre(nn.Module):
         embeddings = torch.stack(embeddings, dim=1)  # (batch_size, num_windows, embedding_dim)
         x_transformed = self.attention_model(embeddings)
         
-        return x_transformed
+        return x_transformed,embeddings
 
 
 # Support classes and functions
@@ -263,7 +263,7 @@ def main():
 
     # Print shapes
     print("Input shape:", sample_input.shape)  # (16, 100, 20, 3)
-    print("Output shape:", output.shape)  # (16, num_windows, 64)
+    #print("Output shape:", output.shape)  # (16, num_windows, 64)
 
 if __name__ == "__main__":
     main()

@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 from Encoder.Multi_IMU_Encoder import DeepConvGraphEncoderPre, IMUGraph
 from Encoder.Gtr_Text_Encoder import EmbeddingEncoder
 from Encoder.Pose_Encoder import GraphPoseEncoderPre, PoseGraph
-from Loss.pretrain_loss import predefined_infonce
+from Loss.pretrain_loss import contra_loss
+from Loss.to_text_loss import loss_fn
 from c_dataloader import UniMocapDataset, collate_fn
 from torch.utils.data import DataLoader
 
@@ -35,26 +36,12 @@ class BiModalIMU(nn.Module):
 
     def forward(self, text, imu_grav):
         text_embeddings = self.text_encoder(text)
-        imu_embeddings_grav = self.imu_encoder_grav(imu_grav, self.IMU_edge_index)
+        imu_embeddings_grav, imuint = self.imu_encoder_grav(imu_grav, self.IMU_edge_index)
         return text_embeddings, imu_embeddings_grav
-
-# Loss Computation
-def compute_total_loss(text_embeddings,imu_embeddings_grav):
-    def safe_infonce(x, y):
-        x = torch.clamp(x, min=1e-8)
-        y = torch.clamp(y, min=1e-8)
-        loss = predefined_infonce(x, y)
-        return torch.nan_to_num(loss, nan=0.0, posinf=1.0, neginf=-1.0)
-
-    total_loss = torch.nanmean(torch.stack([
-        safe_infonce(text_embeddings, imu_embeddings_grav),
-    ]))
-
-    return total_loss
 
 # Training Function
 def train_bimodel(epochs=300, batch_size=128, learning_rate=0.001, early_stop_patience=10, patience=7, patience_factor=0.5, h5_file_path = "../CrosSim_Data/UniMocap/full_dataset.h5"):
-    log_file = open("training_log_textimu_11.txt", "w")
+    log_file = open("training_log_textimu_downtext.txt", "w")
     log_message(log_file, "Starting Training...")
 
     # Load dataset
@@ -84,7 +71,13 @@ def train_bimodel(epochs=300, batch_size=128, learning_rate=0.001, early_stop_pa
 
             text_embeddings, imu_emb_grav = model(text_data, imu_data_grav)
 
-            total_loss = compute_total_loss(text_embeddings,imu_emb_grav)
+
+           # Compute contra loss
+            contra_loss_val = contra_loss(text_embeddings, imu_emb_grav)
+
+            # Combine both losses
+            total_loss = contra_loss_val 
+
             total_loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
@@ -108,7 +101,7 @@ def train_bimodel(epochs=300, batch_size=128, learning_rate=0.001, early_stop_pa
 
         scheduler.step(avg_loss)
 
-    torch.save(model.state_dict(), "textimu_11.pth")
+    torch.save(model.state_dict(), "textimu_downtext.pth")
     log_message(log_file, "Training complete! Model saved.")
 
     log_file.close()

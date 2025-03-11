@@ -7,7 +7,9 @@ import matplotlib.pyplot as plt
 from Encoder.Multi_IMU_Encoder import DeepConvGraphEncoderPre, IMUGraph
 from Encoder.Gtr_Text_Encoder import EmbeddingEncoder
 from Encoder.Pose_Encoder import GraphPoseEncoderPre, PoseGraph
+from Decoder.pose_decoder import PoseDecoder
 from Loss.pretrain_loss import contra_loss
+from Loss.to_pose_loss import pose_loss
 from c_dataloader import UniMocapDataset, collate_fn
 from torch.utils.data import DataLoader
 
@@ -35,15 +37,17 @@ class BiModalIMU(nn.Module):
                                                         output_dim=embedding_size).to(device)
         self.pose_edge_index = PoseGraph(max_hop=hof, dilation=dilation).edge_index.to(device)
         self.IMU_edge_index = IMUGraph(max_hop=hof, dilation=dilation).edge_index.to(device)
-
+        self.pose_decoder = PoseDecoder()
     def forward(self, pose, imu_grav):
         pose_embeddings, poseint = self.pose_encoder(pose, self.pose_edge_index)
         imu_embeddings_grav, imuint = self.imu_encoder_grav(imu_grav, self.IMU_edge_index)
-        return pose_embeddings,imu_embeddings_grav
+        pred_pose = self.pose_decoder(imuint)
+        return pose_embeddings,imu_embeddings_grav, pred_pose
+
 
 # Training Function
 def train_bipose(epochs=300, batch_size=128, learning_rate=0.001, early_stop_patience=10, patience=7, patience_factor=0.5, h5_file_path = "../CrosSim_Data/UniMocap/full_dataset.h5"):
-    log_file = open("training_log_imupose.txt", "w")
+    log_file = open("training_log_imupose_downpose.txt", "w")
     log_message(log_file, "Starting Training...")
 
     # Load dataset
@@ -71,9 +75,17 @@ def train_bipose(epochs=300, batch_size=128, learning_rate=0.001, early_stop_pat
             pose_data = pose_data.to(device, dtype=torch.float32, non_blocking=True)
             imu_data_grav = imu_data_grav.view(imu_data_grav.shape[0], imu_data_grav.shape[2], imu_data_grav.shape[1], 6).to(device, dtype=torch.float32, non_blocking=True)
 
-            pose_embeddings,imu_emb_grav = model(pose_data, imu_data_grav)
+            pose_embeddings,imu_emb_grav,pred_pose = model(pose_data, imu_data_grav)
 
-            total_loss = contra_loss(pose_embeddings, imu_emb_grav)
+            # Compute contra loss
+            contra_loss_val = contra_loss(pose_embeddings, imu_emb_grav)
+
+            # Compute pose loss
+            pose_loss_val = pose_loss(pred_pose, pose_data)
+
+            # Combine both losses
+            total_loss = contra_loss_val + pose_loss_val
+
             total_loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
@@ -97,7 +109,7 @@ def train_bipose(epochs=300, batch_size=128, learning_rate=0.001, early_stop_pat
 
         scheduler.step(avg_loss)
 
-    torch.save(model.state_dict(), "imupose.pth")
+    torch.save(model.state_dict(), "imupose_downpose.pth")
     log_message(log_file, "Training complete! Model saved.")
 
     log_file.close()
