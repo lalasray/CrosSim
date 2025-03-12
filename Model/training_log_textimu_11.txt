@@ -1,3 +1,0 @@
-Starting Training...
-Epoch [1/300], Loss: 4.5300
-Epoch [2/300], Loss: 4.1435

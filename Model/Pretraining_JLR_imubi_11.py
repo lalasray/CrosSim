@@ -68,7 +68,7 @@ def compute_total_loss(text_embeddings, pose_embeddings, imu_embeddings, imu_emb
 
 # Training Function
 def train_model_imubi(epochs=300, batch_size=128, learning_rate=0.001, early_stop_patience=10, patience=7, patience_factor=0.5, h5_file_path = "../CrosSim_Data/UniMocap/full_dataset.h5"):
-    log_file = open("training_log_jlr_imubi_11.txt", "w")
+    log_file = open("training_log_jlr_imubi.txt", "w")
     log_message(log_file, "Starting Training...")
 
     # Load dataset
@@ -124,7 +124,7 @@ def train_model_imubi(epochs=300, batch_size=128, learning_rate=0.001, early_sto
 
         scheduler.step(avg_loss)
 
-    torch.save(model.state_dict(), "jlr_imubi_11.pth")
+    torch.save(model.state_dict(), "jlr_imubi.pth")
     log_message(log_file, "Training complete! Model saved.")
 
     log_file.close()
