@@ -40,7 +40,7 @@ class BiModalIMU(nn.Module):
         return text_embeddings, imu_embeddings_grav
 
 # Training Function
-def train_bimodel(epochs=300, batch_size=128, learning_rate=0.001, early_stop_patience=10, patience=7, patience_factor=0.5, h5_file_path = "../CrosSim_Data/UniMocap/full_dataset.h5"):
+def train_bimodel(epochs=300, batch_size=128, learning_rate=0.001, early_stop_patience=20, patience=15, patience_factor=0.5, h5_file_path = "../CrosSim_Data/UniMocap/full_dataset.h5"):
     log_file = open("training_log_textimu_downtext.txt", "w")
     log_message(log_file, "Starting Training...")
 

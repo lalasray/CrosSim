@@ -46,7 +46,7 @@ class BiModalIMU(nn.Module):
 
 
 # Training Function
-def train_bipose(epochs=300, batch_size=128, learning_rate=0.001, early_stop_patience=10, patience=7, patience_factor=0.5, h5_file_path = "../CrosSim_Data/UniMocap/full_dataset.h5"):
+def train_bipose(epochs=300, batch_size=128, learning_rate=0.001, early_stop_patience=20, patience=15, patience_factor=0.5, h5_file_path = "../CrosSim_Data/UniMocap/full_dataset.h5"):
     log_file = open("training_log_imupose_downpose.txt", "w")
     log_message(log_file, "Starting Training...")
 
