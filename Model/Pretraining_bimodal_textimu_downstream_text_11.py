@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+from torch.utils.tensorboard import SummaryWriter
 
 from Encoder.Multi_IMU_Encoder import DeepConvGraphEncoderPre, IMUGraph
 from Encoder.Gtr_Text_Encoder import EmbeddingEncoder
@@ -15,11 +16,6 @@ from torch.utils.data import DataLoader
 
 # Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-# Logging Function
-def log_message(log_file, message):
-    print(message)
-    log_file.write(message + "\n")
 
 # Function to count trainable parameters
 def count_parameters(model):
@@ -34,7 +30,6 @@ class BiModalIMU(nn.Module):
                                                         embedding_dim=64, window_size=window * 4, stride=stride_size * 4,
                                                         output_dim=embedding_size).to(device)
         self.IMU_edge_index = IMUGraph(max_hop=hof, dilation=dilation).edge_index.to(device)
-
         self.sentence_decoder = SenteceDecoder()
 
     def forward(self, text, imu_grav):
@@ -45,11 +40,10 @@ class BiModalIMU(nn.Module):
 
 # Training Function
 def train_bimodel(epochs=300, batch_size=128, learning_rate=0.001, early_stop_patience=20, patience=15, patience_factor=0.5, h5_file_path = "../CrosSim_Data/UniMocap/full_dataset.h5"):
-    log_file = open("training_log_textimu_downtext.txt", "w")
-    log_message(log_file, "Starting Training...")
+    writer = SummaryWriter("runs/BiModalIMU_Training")
+    print("Starting Training...")
 
     # Load dataset
-    h5_file_path = h5_file_path
     dataset = UniMocapDataset(h5_file_path)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn, num_workers=8, pin_memory=True)
 
@@ -62,11 +56,11 @@ def train_bimodel(epochs=300, batch_size=128, learning_rate=0.001, early_stop_pa
     best_loss = float('inf')
     no_improvement_epochs = 0
 
-    loss_values = []
-
     for epoch in range(epochs):
         model.train()
         epoch_loss = 0
+        epoch_contra_loss = 0
+        epoch_text_loss = 0
 
         for text_data, pose_data, imu_data, imu_data_grav in tqdm(dataloader, desc=f"Epoch {epoch+1}/{epochs}"):
             optimizer.zero_grad()
@@ -75,18 +69,16 @@ def train_bimodel(epochs=300, batch_size=128, learning_rate=0.001, early_stop_pa
 
             text_embeddings, imu_emb_grav, gtr = model(text_data, imu_data_grav)
 
-
-           # Compute contra loss
+            # Compute contra loss
             contra_loss_val = contra_loss(text_embeddings, imu_emb_grav)
+            epoch_contra_loss += contra_loss_val.item()
 
-            len = imu_data_grav.shape[1]
+            len_seq = imu_data_grav.shape[1]
+            text_loss_val = loss_fn(gtr, text_data.unsqueeze(1).expand(-1, int(len_seq/4), -1))
+            epoch_text_loss += text_loss_val.item()
 
-            # Compute pose loss
-            text_loss_val = loss_fn(gtr, text_data.unsqueeze(1).expand(-1, int(len/4), -1))
-
-            # Combine both losses
+            # Total loss
             total_loss = contra_loss_val + text_loss_val
-
             total_loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
@@ -94,9 +86,14 @@ def train_bimodel(epochs=300, batch_size=128, learning_rate=0.001, early_stop_pa
             epoch_loss += total_loss.item()
 
         avg_loss = epoch_loss / len(dataloader)
-        loss_values.append(avg_loss)
+        avg_contra_loss = epoch_contra_loss / len(dataloader)
+        avg_text_loss = epoch_text_loss / len(dataloader)
 
-        log_message(log_file, f"Epoch [{epoch+1}/{epochs}], Loss: {avg_loss:.4f}")
+        writer.add_scalar('Loss/Total', avg_loss, epoch)
+        writer.add_scalar('Loss/Contrastive', avg_contra_loss, epoch)
+        writer.add_scalar('Loss/Text', avg_text_loss, epoch)
+
+        print(f"Epoch [{epoch+1}/{epochs}], Loss: {avg_loss:.4f}, Contrastive Loss: {avg_contra_loss:.4f}, Text Loss: {avg_text_loss:.4f}")
 
         if avg_loss < best_loss:
             best_loss = avg_loss
@@ -105,15 +102,14 @@ def train_bimodel(epochs=300, batch_size=128, learning_rate=0.001, early_stop_pa
             no_improvement_epochs += 1
 
         if no_improvement_epochs >= early_stop_patience:
-            log_message(log_file, f"Early stopping triggered at epoch {epoch+1}.")
+            print(f"Early stopping triggered at epoch {epoch+1}.")
             break
 
         scheduler.step(avg_loss)
 
     torch.save(model.state_dict(), "textimu_downtext.pth")
-    log_message(log_file, "Training complete! Model saved.")
-
-    log_file.close()
+    print("Training complete! Model saved.")
+    writer.close()
 
 if __name__ == "__main__":
     train_bimodel()
