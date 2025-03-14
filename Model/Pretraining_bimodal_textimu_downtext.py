@@ -27,7 +27,7 @@ def train_bimodeldown(epochs=500, batch_size=128, learning_rate=0.001, early_sto
     val_size = len(dataset) - train_size
     train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
 
-    train_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn, num_workers=8, pin_memory=True, persistent_workers=True)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn, num_workers=8, pin_memory=True, persistent_workers=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn, num_workers=8, pin_memory=True, persistent_workers=True)
 
     model = BiModalIMUDownText().to(device)
@@ -65,8 +65,8 @@ def train_bimodeldown(epochs=500, batch_size=128, learning_rate=0.001, early_sto
                 first_epoch_contra_loss = contra_loss_val.item()
                 first_epoch_text_loss = text_loss_val.item()
 
-            contrastive_loss_weight = first_epoch_text_loss / first_epoch_contra_loss
-            text_loss_weight = first_epoch_contra_loss / first_epoch_text_loss
+            contrastive_loss_weight = first_epoch_contra_loss * first_epoch_text_loss
+            text_loss_weight = first_epoch_text_loss * first_epoch_contra_loss
 
             total_loss = contrastive_loss_weight * contra_loss_val + text_loss_weight * text_loss_val
             total_loss.backward()
