@@ -57,3 +57,20 @@ class BiModalIMUDownPose(nn.Module):
         imu_embeddings_grav, imuint = self.imu_encoder_grav(imu_grav, self.IMU_edge_index)
         pose_emb = self.pose_decoder(imuint)
         return text_embeddings, imu_embeddings_grav, pose_emb
+    
+class BiModalPose(nn.Module):
+    def __init__(self, embedding_size=768, pose_joints=24, imu_positions=21, window=1, stride_size=1, hof=3, dilation=1):
+        super(BiModalPose, self).__init__()
+        self.pose_encoder = GraphPoseEncoderPre(num_nodes=pose_joints, feature_dim=6, hidden_dim=128,
+                                                embedding_dim=64, window_size=window, stride=stride_size,
+                                                output_dim=embedding_size).to(device)
+        self.imu_encoder_grav = DeepConvGraphEncoderPre(num_nodes=imu_positions, feature_dim=6, hidden_dim=128,
+                                                        embedding_dim=64, window_size=window * 4, stride=stride_size * 4,
+                                                        output_dim=embedding_size).to(device)
+        self.pose_edge_index = PoseGraph(max_hop=hof, dilation=dilation).edge_index.to(device)
+        self.IMU_edge_index = IMUGraph(max_hop=hof, dilation=dilation).edge_index.to(device)
+
+    def forward(self, pose, imu_grav):
+        pose_embeddings, poseint = self.pose_encoder(pose, self.pose_edge_index)
+        imu_embeddings_grav, imuint = self.imu_encoder_grav(imu_grav, self.IMU_edge_index)
+        return pose_embeddings,imu_embeddings_grav
