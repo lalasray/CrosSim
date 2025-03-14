@@ -8,3 +8,5 @@ info-nce-pytorch
 vec2text
 h5py
 torch_geometric
+wandb
+

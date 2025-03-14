@@ -9,5 +9,4 @@
 /CrosSim_Data
 *.png
 *.txt
-*.txt
-*.txt
+/Model/wandb

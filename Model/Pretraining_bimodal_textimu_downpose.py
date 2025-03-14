@@ -3,12 +3,8 @@ import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-from torch.utils.tensorboard import SummaryWriter
+from architectures import BiModalIMUDown,count_parameters
 
-from Encoder.Multi_IMU_Encoder import DeepConvGraphEncoderPre, IMUGraph
-from Encoder.Gtr_Text_Encoder import EmbeddingEncoder
-from Encoder.Pose_Encoder import GraphPoseEncoderPre, PoseGraph
-from Decoder.gtr_decoder import SenteceDecoder
 from Loss.pretrain_loss import contra_loss
 from Loss.to_text_loss import loss_fn
 from c_dataloader import UniMocapDataset, collate_fn
@@ -17,38 +13,14 @@ from torch.utils.data import DataLoader
 # Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Function to count trainable parameters
-def count_parameters(model):
-    return sum(p.numel() for p in model.parameters() if p.requires_grad)
-
-# Model Definition
-class BiModalIMU(nn.Module):
-    def __init__(self, embedding_size=768, pose_joints=24, imu_positions=21, window=1, stride_size=1, hof=3, dilation=1):
-        super(BiModalIMU, self).__init__()
-        self.text_encoder = EmbeddingEncoder(output_size=embedding_size).to(device)
-        self.imu_encoder_grav = DeepConvGraphEncoderPre(num_nodes=imu_positions, feature_dim=6, hidden_dim=128,
-                                                        embedding_dim=64, window_size=window * 4, stride=stride_size * 4,
-                                                        output_dim=embedding_size).to(device)
-        self.IMU_edge_index = IMUGraph(max_hop=hof, dilation=dilation).edge_index.to(device)
-        self.sentence_decoder = SenteceDecoder()
-
-    def forward(self, text, imu_grav):
-        text_embeddings = self.text_encoder(text)
-        imu_embeddings_grav, imuint = self.imu_encoder_grav(imu_grav, self.IMU_edge_index)
-        gtr = self.sentence_decoder(imuint)
-        return text_embeddings, imu_embeddings_grav, gtr
-
 # Training Function
-def train_bimodel(epochs=300, batch_size=128, learning_rate=0.001, early_stop_patience=20, patience=15, patience_factor=0.5, h5_file_path = "../CrosSim_Data/UniMocap/full_dataset.h5"):
-    writer = SummaryWriter("runs/BiModalIMU_Training")
-    print("Starting Training...")
-
+def train_bimodeldown(epochs=300, batch_size=128, learning_rate=0.001, early_stop_patience=20, patience=15, patience_factor=0.5, h5_file_path = "../CrosSim_Data/UniMocap/full_dataset.h5"):
     # Load dataset
     dataset = UniMocapDataset(h5_file_path)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn, num_workers=8, pin_memory=True)
 
     # Initialize model, optimizer, scheduler
-    model = BiModalIMU().to(device)
+    model = BiModalIMUDown().to(device)
     print(f"Total Trainable Parameters: {count_parameters(model):,}")
     optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-4)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=patience_factor, patience=patience, verbose=True)
@@ -89,10 +61,6 @@ def train_bimodel(epochs=300, batch_size=128, learning_rate=0.001, early_stop_pa
         avg_contra_loss = epoch_contra_loss / len(dataloader)
         avg_text_loss = epoch_text_loss / len(dataloader)
 
-        writer.add_scalar('Loss/Total', avg_loss, epoch)
-        writer.add_scalar('Loss/Contrastive', avg_contra_loss, epoch)
-        writer.add_scalar('Loss/Text', avg_text_loss, epoch)
-
         print(f"Epoch [{epoch+1}/{epochs}], Loss: {avg_loss:.4f}, Contrastive Loss: {avg_contra_loss:.4f}, Text Loss: {avg_text_loss:.4f}")
 
         if avg_loss < best_loss:
@@ -108,8 +76,6 @@ def train_bimodel(epochs=300, batch_size=128, learning_rate=0.001, early_stop_pa
         scheduler.step(avg_loss)
 
     torch.save(model.state_dict(), "textimu_downtext.pth")
-    print("Training complete! Model saved.")
-    writer.close()
 
 if __name__ == "__main__":
-    train_bimodel()
+    train_bimodeldown()
