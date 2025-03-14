@@ -32,7 +32,7 @@ def train_bimodeldown(epochs=500, batch_size=128, learning_rate=0.001, early_sto
     val_size = len(dataset) - train_size
     train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
 
-    train_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn, num_workers=8, pin_memory=True, persistent_workers=True)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn, num_workers=8, pin_memory=True, persistent_workers=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn, num_workers=8, pin_memory=True, persistent_workers=True)
 
     # Initialize model, optimizer, scheduler
@@ -102,6 +102,7 @@ def train_bimodeldown(epochs=500, batch_size=128, learning_rate=0.001, early_sto
             for text_data, pose_data, imu_data, imu_data_grav in tqdm(val_loader, desc=f"Epoch {epoch+1}/{epochs} [Validation]"):
                 text_data = text_data.view(text_data.shape[0], 768).to(device, dtype=torch.float32, non_blocking=True)
                 imu_data_grav = imu_data_grav.view(imu_data_grav.shape[0], imu_data_grav.shape[2], imu_data_grav.shape[1], 6).to(device, dtype=torch.float32, non_blocking=True)
+                pose_data = pose_data.to(device, dtype=torch.float32, non_blocking=True)
 
                 text_embeddings, imu_emb_grav, pose_emb = model(text_data, imu_data_grav)
 
